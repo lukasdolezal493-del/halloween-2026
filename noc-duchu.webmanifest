@@ -1,8 +1,8 @@
 {
-  "id": "./?app=nocduchu2",
+  "id": "./?app=nocduchu3",
   "name": "Noc duchů – Černý Důl",
   "short_name": "Noc duchů",
-  "start_url": "./index.html?app=2",
+  "start_url": "./index.html?app=3",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

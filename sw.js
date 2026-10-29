@@ -1,4 +1,4 @@
-const C="halloween-2026-v1";
+const C="halloween-2026-v2";
 const A=["./","./index.html","./style.css","./app.js","./manifest.webmanifest","./icon-192.png","./icon-512.png","./apple-touch-icon.png","./griffy0.woff2","./griffy1.woff2",
 "./img/mapa.jpg","./img/zvonky.jpg","./img/mriz.jpg","./img/kopec.jpg","./img/hydrant.jpg","./img/truhla.jpg","./img/cedule.jpg","./img/kotlik.jpg","./img/monstra.jpg","./img/d_boo.jpg","./img/d_hroch.jpg","./img/d_sluzba.jpg","./img/d_pirat.jpg","./img/kontejner.jpg","./img/park8.jpg","./img/lavicky.jpg"];
 // cache:"reload" = stahnout ze site, ne ze stare pameti prohlizece

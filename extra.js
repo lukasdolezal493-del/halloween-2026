@@ -232,8 +232,45 @@ function speak(text, manual) {
   ambDuck(true); u.onend = u.onerror = () => ambDuck(false);
   speechSynthesis.speak(u);
 }
-function stopSpeak() { try { speechSynthesis.cancel(); } catch (e) {} ambDuck(false); }
-function speakTask(t, manual) { if (!t || !t.story) return; speak(`${t.title}. ${t.story} ${S.done[t.id] ? "" : t.q || ""}`, manual); }
+// namluvene nahravky (voice/<id>.mp3) + strasidelne efekty pri prehrani; kdyz chybi, cte telefon
+const VBUF = {}; let VS = null, vTok = 0, IR = null;
+async function voiceBuf(id) {
+  if (VBUF[id]) return VBUF[id];
+  const r = await fetch(`voice/${id}.mp3`); if (!r.ok) throw new Error("bez nahravky");
+  return VBUF[id] = await ac().decodeAudioData(await r.arrayBuffer());
+}
+function spookyPlay(buf) {
+  const a = ac(), t = a.currentTime + 0.05, RATE = 0.9;
+  if (!IR) { IR = a.createBuffer(2, a.sampleRate * 2.8, a.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const d = IR.getChannelData(ch); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3.2); } }
+  const s = a.createBufferSource(); s.buffer = buf; s.playbackRate.value = RATE;
+  const lo = a.createBiquadFilter(); lo.type = "lowshelf"; lo.frequency.value = 220; lo.gain.value = 5;
+  const dry = a.createGain(); dry.gain.value = 0.85;
+  const conv = a.createConvolver(); conv.buffer = IR; const wet = a.createGain(); wet.gain.value = 0.42;
+  const dl = a.createDelay(1); dl.delayTime.value = 0.32; const fb = a.createGain(); fb.gain.value = 0.32;
+  const dlf = a.createBiquadFilter(); dlf.type = "lowpass"; dlf.frequency.value = 1800; const ech = a.createGain(); ech.gain.value = 0.35;
+  const s2 = a.createBufferSource(); s2.buffer = buf; s2.playbackRate.value = RATE; s2.detune.value = -8; // chvejici se "duch" za hlasem
+  const trem = a.createGain(); trem.gain.value = 0.18; const lfo = a.createOscillator(), lg = a.createGain(); lfo.frequency.value = 5.5; lg.gain.value = 0.12;
+  const hp = a.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 500;
+  const master = a.createGain(); master.gain.value = 1.3;
+  lfo.connect(lg); lg.connect(trem.gain);
+  s.connect(lo); lo.connect(dry); dry.connect(master); lo.connect(conv); conv.connect(wet); wet.connect(master);
+  lo.connect(dl); dl.connect(dlf); dlf.connect(fb); fb.connect(dl); dlf.connect(ech); ech.connect(master);
+  s2.connect(hp); hp.connect(trem); trem.connect(conv); trem.connect(master); master.connect(a.destination);
+  s.start(t); s2.start(t + 0.045); lfo.start(t);
+  VS = { nodes: [s, s2, lfo], master }; ambDuck(true);
+  s.onended = () => { if (VS && VS.nodes[0] === s) setTimeout(() => { if (VS && VS.nodes[0] === s) stopSpeak(); }, 3000); };
+}
+function stopSpeak() {
+  vTok++; try { speechSynthesis.cancel(); } catch (e) {}
+  if (VS) { const v = VS; VS = null; try { v.master.gain.setTargetAtTime(0, ac().currentTime, 0.08); } catch (e) {} setTimeout(() => v.nodes.forEach(n => { try { n.stop(); } catch (e) {} }), 400); }
+  ambDuck(false);
+}
+function speakTask(t, manual) {
+  if (!t || !t.story) return; stopSpeak(); const tok = vTok;
+  voiceBuf(t.id).then(buf => { if (tok === vTok && (manual || cur === "task")) spookyPlay(buf); })
+    .catch(() => { if (tok === vTok) speak(`${t.title}. ${t.story} ${S.done[t.id] ? "" : t.q || ""}`, manual); });
+}
 
 // ---------- 6) ZVUKY V POZADI ----------
 let AMB = null;

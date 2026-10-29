@@ -325,8 +325,10 @@ function startAmb() {
   s.connect(fl); fl.connect(g); g.connect(out); out.connect(a.destination); s.start(); l1.start(); l2.start();
   const hoot = () => { if (!AMB) return; if (!AMB.duck) { tone(410, 0, 0.35, "sine", 0.05, 380); tone(400, 0.5, 0.7, "sine", 0.05, 320); } AMB.ht = setTimeout(hoot, rand(25, 50) * 1000); };
   AMB = { nodes: [s, l1, l2], out, duck: false }; AMB.ht = setTimeout(hoot, rand(8, 15) * 1000);
+  const evt = () => { if (!AMB) return; if (!AMB.duck) ambRandom(); AMB.et = setTimeout(evt, rand(15, 35) * 1000); }; // hrom, dvere, vlk...
+  AMB.et = setTimeout(evt, rand(6, 12) * 1000);
 }
-function stopAmb() { if (!AMB) return; clearTimeout(AMB.ht); AMB.nodes.forEach(n => { try { n.stop(); } catch (e) {} }); AMB.out.disconnect(); AMB = null; }
+function stopAmb() { if (!AMB) return; clearTimeout(AMB.ht); clearTimeout(AMB.et); AMB.nodes.forEach(n => { try { n.stop(); } catch (e) {} }); AMB.out.disconnect(); AMB = null; }
 function ambDuck(on) { if (!AMB) return; AMB.duck = on; try { AMB.out.gain.setTargetAtTime(on ? 0.15 : 1, ac().currentTime, 0.3); } catch (e) {} }
 document.addEventListener("pointerdown", () => { if (S.amb && !AMB) startAmb(); }, true);
 document.addEventListener("visibilitychange", () => { try { if (document.hidden) AC && AC.suspend(); else AC && AC.resume(); } catch (e) {} });
@@ -342,6 +344,7 @@ $("#p-voice").onclick = e => { const b = e.target.closest("button"); if (!b) ret
 $("#p-amb").onclick = e => { const b = e.target.closest("button"); if (!b) return; S.amb = b.dataset.v === "1"; save(); S.amb ? startAmb() : stopAmb(); paintFxSet(); };
 $("#p-scare-test").onclick = () => scare();
 $("#p-voice-test").onclick = () => speakTask(TASKS[1], true);
+$("#p-amb-test").onclick = () => { const a = ac(); Object.keys(AMBFX).forEach((k, i) => setTimeout(() => { toast(AMB_NAMES[k]); ambEvent(a, a.destination, a.currentTime + 0.05, k, 0.8); }, i * 4500)); };
 
 // ---------- PRIHORIVA: hledani pokladu podle GPS (po odemceni) ----------
 const HUNT_LV = [ // [do metru, text, barva]
@@ -419,4 +422,75 @@ function howlPlay() {
     pre.connect(dl); dl.connect(lp); lp.connect(gg); gg.connect(out); });
   out.connect(a.destination); s.start(t); ambDuck(true);
   s.onended = () => setTimeout(() => ambDuck(false), 2500);
+}
+
+// ---------- STRASIDELNE ZVUKY V POZADI (syntetizovane, bez nahravek) ----------
+// Kazdy zvuk: (a = AudioContext, out = kam hrat, t = kdy zacit). Funguje i v OfflineAudioContext (ukazky).
+function nBuf(a, sec) { const b = a.createBuffer(1, Math.floor(a.sampleRate * sec), a.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; return b; }
+function env(g, t, att, len, v) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + att); g.gain.exponentialRampToValueAtTime(0.0001, t + len); }
+const AMBFX = {
+  hrom(a, out, t) { // vzdaleny hrom: pomaly nabeh, dlouhe dunei
+    [[0, 4.5, 260, 0.9], [0.25, 3.5, 120, 0.8], [1.1, 3, 200, 0.45]].forEach(([d, len, f, v]) => {
+      const s = a.createBufferSource(), fl = a.createBiquadFilter(), g = a.createGain(); s.buffer = nBuf(a, len);
+      fl.type = "lowpass"; fl.frequency.value = f; env(g, t + d, 0.25, len, v); s.connect(fl); fl.connect(g); g.connect(out); s.start(t + d); });
+  },
+  dvere(a, out, t) { // skripani pantu: trhave treni (stick-slip) pres rezonanci dreva
+    const len = 2.2, o = a.createOscillator(), am = a.createOscillator(), amg = a.createGain(), g = a.createGain(), f1 = a.createBiquadFilter(), f2 = a.createBiquadFilter(), mix = a.createGain();
+    o.type = "sawtooth"; const fr = new Float32Array(40); for (let i = 0; i < 40; i++) fr[i] = 55 + 35 * Math.sin(i / 6) + Math.random() * 25;
+    o.frequency.setValueCurveAtTime(fr, t, len);
+    am.type = "square"; am.frequency.setValueAtTime(18, t); am.frequency.linearRampToValueAtTime(34, t + len); amg.gain.value = 0.5;
+    const base = a.createGain(); base.gain.value = 0.5; am.connect(amg); amg.connect(base.gain);
+    f1.type = "bandpass"; f1.frequency.value = 1100; f1.Q.value = 9; f2.type = "bandpass"; f2.frequency.value = 2300; f2.Q.value = 12;
+    o.connect(base); base.connect(f1); base.connect(f2); f1.connect(mix); f2.connect(mix); mix.gain.value = 2.2;
+    env(g, t, 0.15, len, 0.7); mix.connect(g); g.connect(out); o.start(t); am.start(t); o.stop(t + len + 0.1); am.stop(t + len + 0.1);
+  },
+  vlk(a, out, t) { // vlci vyti v dalce
+    const o = a.createOscillator(), o2 = a.createOscillator(), v = a.createOscillator(), vg = a.createGain(), g = a.createGain(), lp = a.createBiquadFilter(), g2 = a.createGain();
+    o.type = "sine"; o2.type = "triangle";
+    [o, o2].forEach((x, k) => { const m = k ? 2 : 1; x.frequency.setValueAtTime(330 * m, t); x.frequency.exponentialRampToValueAtTime(620 * m, t + 0.9); x.frequency.setValueAtTime(620 * m, t + 0.9);
+      x.frequency.linearRampToValueAtTime(580 * m, t + 2.4); x.frequency.exponentialRampToValueAtTime(380 * m, t + 3.4); });
+    v.frequency.value = 5; vg.gain.value = 9; v.connect(vg); vg.connect(o.frequency); vg.connect(o2.frequency);
+    g2.gain.value = 0.12; o2.connect(g2); lp.type = "lowpass"; lp.frequency.value = 1800;
+    o.connect(lp); g2.connect(lp); env(g, t, 0.5, 3.5, 0.32); lp.connect(g); g.connect(out);
+    [o, o2, v].forEach(x => { x.start(t); x.stop(t + 3.6); });
+  },
+  havran(a, out, t) { // tri zakrakani
+    for (let i = 0; i < 3; i++) { const t0 = t + i * 0.42 + Math.random() * 0.08, o = a.createOscillator(), bp = a.createBiquadFilter(), g = a.createGain(), s = a.createBufferSource(), sg = a.createGain();
+      o.type = "sawtooth"; o.frequency.setValueAtTime(820, t0); o.frequency.exponentialRampToValueAtTime(520, t0 + 0.22);
+      s.buffer = nBuf(a, 0.3); sg.gain.value = 0.5; bp.type = "bandpass"; bp.frequency.value = 1400; bp.Q.value = 2.5;
+      o.connect(bp); s.connect(sg); sg.connect(bp); env(g, t0, 0.02, 0.26, 0.5); bp.connect(g); g.connect(out); o.start(t0); o.stop(t0 + 0.3); s.start(t0); }
+  },
+  retezy(a, out, t) { // rincení retezu: kratke kovove cinknuti
+    for (let i = 0; i < 14; i++) { const t0 = t + Math.random() * 1.4;
+      [2100, 3370, 5150].forEach((f, k) => { const o = a.createOscillator(), g = a.createGain(); o.frequency.value = f * (0.95 + Math.random() * 0.1);
+        env(g, t0, 0.003, 0.09 + k * 0.03, 0.08 / (k + 1)); o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + 0.2); });
+      const s = a.createBufferSource(), hp = a.createBiquadFilter(), g = a.createGain(); s.buffer = nBuf(a, 0.05); hp.type = "highpass"; hp.frequency.value = 4000;
+      env(g, t0, 0.002, 0.05, 0.12); s.connect(hp); hp.connect(g); g.connect(out); s.start(t0); }
+  },
+  duch(a, out, t) { // duchovske "uuuu": vzdusny sum + houpavy ton
+    const len = 3.5, s = a.createBufferSource(), bp = a.createBiquadFilter(), g = a.createGain(), o = a.createOscillator(), v = a.createOscillator(), vg = a.createGain(), og = a.createGain();
+    s.buffer = nBuf(a, len); bp.type = "bandpass"; bp.Q.value = 9;
+    bp.frequency.setValueAtTime(350, t); bp.frequency.linearRampToValueAtTime(850, t + 1.4); bp.frequency.linearRampToValueAtTime(300, t + len);
+    s.connect(bp); bp.connect(g);
+    o.frequency.setValueAtTime(260, t); o.frequency.linearRampToValueAtTime(330, t + 1.4); o.frequency.linearRampToValueAtTime(210, t + len);
+    v.frequency.value = 4; vg.gain.value = 12; v.connect(vg); vg.connect(o.frequency); og.gain.value = 0.25; o.connect(og); og.connect(g);
+    env(g, t, 0.8, len, 0.6); g.connect(out); s.start(t); o.start(t); v.start(t); o.stop(t + len); v.stop(t + len);
+  }
+};
+const AMB_LVL = { hrom: 1.8, dvere: 3, vlk: 0.6, havran: 2.5, retezy: 2.2, duch: 1.3 }; // srovnani hlasitosti (zmereno)
+const AMB_NAMES = { hrom: "⛈️ hrom", dvere: "🚪 dveře", vlk: "🐺 vlk", havran: "🐦‍⬛ havran", retezy: "⛓️ řetězy", duch: "👻 duch" };
+// zahraj jeden zvuk z dalky: nahodne zleva/zprava, s dozvukem
+function ambEvent(a, dest, t, name, vol) {
+  if (!IR) spookyIR(a);
+  const pan = a.createStereoPanner ? a.createStereoPanner() : a.createGain(); if (pan.pan) pan.pan.value = rand(-0.8, 0.8);
+  const dry = a.createGain(), conv = a.createConvolver(), wet = a.createGain(), out = a.createGain();
+  dry.gain.value = 0.7; conv.buffer = IR; wet.gain.value = 0.5; out.gain.value = (vol == null ? 0.5 : vol) * AMB_LVL[name];
+  dry.connect(out); conv.connect(wet); wet.connect(out); out.connect(pan); pan.connect(dest);
+  const tap = a.createGain(); tap.connect(dry); tap.connect(conv);
+  AMBFX[name](a, tap, t);
+}
+let ambLast = "";
+function ambRandom() {
+  const keys = Object.keys(AMBFX).filter(k => k !== ambLast), k = keys[Math.floor(Math.random() * keys.length)]; ambLast = k;
+  const a = ac(); ambEvent(a, AMB.out, a.currentTime + 0.05, k);
 }

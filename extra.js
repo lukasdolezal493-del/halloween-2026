@@ -121,7 +121,7 @@ function photoQuality(img) {
 function photoCheck(t, p) {
   const m = $("#pcheck"), img = new Image();
   $("#pc-ref").src = t.img ? `img/${t.img}.jpg` : ""; $("#pc-ref").parentNode.hidden = !t.img; $("#pc-photo").src = p;
-  const mode = parent => { $("#pc-kids").hidden = parent; $("#pc-parent").hidden = !parent;
+  const mode = parent => { $("#pc-kids").hidden = parent; $("#pc-parent").hidden = !parent; $("#pc-sure").hidden = true;
     $("#pc-title").textContent = parent ? "🔐 Strážce hry: sedí to?" : (t.img ? "Je to to samé místo?" : "Povedla se fotka?");
     $("#pc-sub").textContent = parent ? "Porovnej předlohu s fotkou dětí." : "Porovnejte předlohu s vaší fotkou."; };
   mode(false); $("#pc-warn").hidden = true; $("#pc-yes").textContent = "Ano, je to ono! ✅"; $("#pc-yes").classList.remove("ghost"); $("#pc-again").classList.remove("pc-main");
@@ -132,7 +132,9 @@ function photoCheck(t, p) {
     if (w) { $("#pc-warn").textContent = w; $("#pc-warn").hidden = false; $("#pc-yes").textContent = "Přesto použít"; $("#pc-yes").classList.add("ghost"); $("#pc-again").classList.add("pc-main"); } };
   img.src = p;
   const accept = () => { m.hidden = true; hauntPhoto(t.id, p, q => { savePhoto(t.id, q); finishMain(t); }); };
-  $("#pc-yes").onclick = accept;
+  $("#pc-yes").onclick = () => { sndBoo(); vib(40); $("#pc-kids").hidden = true; $("#pc-sure").hidden = false; }; // varovani pred podvadenim
+  $("#pc-sure-yes").onclick = accept;
+  $("#pc-sure-no").onclick = () => { sndTap(); mode(false); };
   $("#pc-again").onclick = () => { m.hidden = true; sndTap(); openCam(ph => ph && photoCheck(t, ph)); };
   $("#pc-adult").onclick = () => { sndTap(); mode(true); };
   $("#pc-ok").onclick = () => askPin("Dospělý: uznat fotku?", accept);

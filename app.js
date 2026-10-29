@@ -468,7 +468,7 @@ function bindTask(t) {
   const ph = $("#ph");
   if (ph) ph.onclick = () => openCam(p => {
     if (!p) return;
-    askPin("Dospělý: schvaluješ fotku?", () => hauntPhoto(t.id, p, q => { savePhoto(t.id, q); finishMain(t); }));
+    photoCheck(t, p);
   });
   const lo = $("#letok");
   if (lo) lo.onclick = () => {

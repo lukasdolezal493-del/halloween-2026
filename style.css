@@ -187,6 +187,14 @@ input:focus{outline:none;border-color:var(--orange)}
 #show-cap{position:absolute;left:0;right:0;bottom:7vh;text-align:center;font:30px Griffy,sans-serif;color:var(--orange2);text-shadow:0 0 12px #000,0 0 4px #000;padding:0 16px}
 #show-x{position:absolute;top:14px;right:14px;width:52px;height:52px;border-radius:50%;border:2px solid var(--orange);background:#000a;color:#fff;font-size:24px;z-index:2}
 .show-hint{position:absolute;top:26px;left:16px;font-size:13px;color:#fff8}
+#pin{z-index:120}
+.pc-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.pc-pair figure{margin:0}
+.pc-pair figure[hidden]{display:none}
+.pc-pair img{width:100%;aspect-ratio:3/4;object-fit:contain;border-radius:12px;border:3px solid var(--orange2);display:block;background:#000}
+.pc-pair figcaption{font-size:13px;color:var(--muted);margin-top:3px}
+.pc-warn{background:#ff4d6d22;border:1px solid var(--red);border-radius:12px;padding:8px 10px;font-size:15px}
+#pc-again.pc-main{background:linear-gradient(180deg,var(--orange2),var(--orange));color:#1a0b00;border:0}
 #toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:#000e;border:1px solid var(--orange);padding:12px 18px;border-radius:14px;z-index:200;max-width:90%;text-align:center}
 .cheat div{padding:4px 0;border-bottom:1px solid var(--line)}
 

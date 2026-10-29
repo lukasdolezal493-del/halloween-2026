@@ -104,6 +104,41 @@ function hauntPhoto(id, data, cb) {
   img.src = data;
 }
 
+// ---------- KONTROLA FOTKY: deti porovnaji samy, dospely jen v krajnim pripade ----------
+// Hranice zmerene na 51 fotkach okoli: cerna fotka jas 5-8, nocni s baterkou 19+; rozmazana ve svetle ostrost <8, ostra 14+.
+// V noci rozmazani schova sum, proto je to jen upozorneni (lze pouzit presto), nikdy zakaz.
+// jas (0-255) a ostrost (prumerny rozdil sousednich pixelu ve svetlych mistech; sum ve tme se nepocita)
+function photoQuality(img) {
+  const W = 200, H = Math.max(1, Math.round(img.height * W / img.width)), c = document.createElement("canvas"); c.width = W; c.height = H;
+  const x = c.getContext("2d"); x.drawImage(img, 0, 0, W, H); const d = x.getImageData(0, 0, W, H).data, g = new Float32Array(W * H);
+  let sum = 0; for (let i = 0; i < W * H; i++) { g[i] = 0.3 * d[i * 4] + 0.59 * d[i * 4 + 1] + 0.11 * d[i * 4 + 2]; sum += g[i]; }
+  let e = 0, n = 0;
+  for (let y = 1; y < H - 1; y++) for (let x2 = 1; x2 < W - 1; x2++) { const i = y * W + x2; if (g[i] < 40) continue;
+    const lap = Math.abs(4 * g[i] - g[i - 1] - g[i + 1] - g[i - W] - g[i + W]); e += lap; n++; }
+  return { mean: sum / (W * H), sharp: n > W * H * 0.03 ? e / n : 0, lit: n / (W * H) };
+}
+
+function photoCheck(t, p) {
+  const m = $("#pcheck"), img = new Image();
+  $("#pc-ref").src = t.img ? `img/${t.img}.jpg` : ""; $("#pc-ref").parentNode.hidden = !t.img; $("#pc-photo").src = p;
+  const mode = parent => { $("#pc-kids").hidden = parent; $("#pc-parent").hidden = !parent;
+    $("#pc-title").textContent = parent ? "🔐 Strážce hry: sedí to?" : (t.img ? "Je to to samé místo?" : "Povedla se fotka?");
+    $("#pc-sub").textContent = parent ? "Porovnej předlohu s fotkou dětí." : "Porovnejte předlohu s vaší fotkou."; };
+  mode(false); $("#pc-warn").hidden = true; $("#pc-yes").textContent = "Ano, je to ono! ✅"; $("#pc-yes").classList.remove("ghost"); $("#pc-again").classList.remove("pc-main");
+  m.hidden = false;
+  img.onload = () => { const q = photoQuality(img); let w = "";
+    if (q.mean < 12) w = "🌑 Fotka je skoro celá černá. Posviťte baterkou 🔦 a vyfoťte to znovu.";
+    else if (q.mean > 40 && q.sharp < 8) w = "🌫️ Fotka je rozmazaná. Držte telefon v klidu a zkuste to znovu.";
+    if (w) { $("#pc-warn").textContent = w; $("#pc-warn").hidden = false; $("#pc-yes").textContent = "Přesto použít"; $("#pc-yes").classList.add("ghost"); $("#pc-again").classList.add("pc-main"); } };
+  img.src = p;
+  const accept = () => { m.hidden = true; hauntPhoto(t.id, p, q => { savePhoto(t.id, q); finishMain(t); }); };
+  $("#pc-yes").onclick = accept;
+  $("#pc-again").onclick = () => { m.hidden = true; sndTap(); openCam(ph => ph && photoCheck(t, ph)); };
+  $("#pc-adult").onclick = () => { sndTap(); mode(true); };
+  $("#pc-ok").onclick = () => askPin("Dospělý: uznat fotku?", accept);
+  $("#pc-no").onclick = () => { m.hidden = true; sndBad(); toast("Strážce hry fotku neuznal. Zkuste to znovu! 📸"); openCam(ph => ph && photoCheck(t, ph)); };
+}
+
 // ---------- 3) FINALE + DIPLOM + PROMITANI ----------
 function finale() {
   const f = $("#finale"), b = $("#fi-bats");
@@ -213,7 +248,7 @@ function scare() {
 }
 setInterval(() => {
   if (!S.scare || S.scare === "off" || S.finished || !S.done.probuzeni || document.hidden) return;
-  if (!["main", "task", "map", "gallery"].includes(cur) || !$("#pin").hidden || !$("#award").hidden || SH) return;
+  if (!["main", "task", "map", "gallery"].includes(cur) || !$("#pin").hidden || !$("#award").hidden || !$("#pcheck").hidden || !$("#morph").hidden || SH) return;
   if (!nextScare) { planScare(); return; }
   if (Date.now() >= nextScare) { scare(); planScare(); }
 }, 15000);

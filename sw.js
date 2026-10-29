@@ -1,4 +1,4 @@
-const C="halloween-2026-v9";
+const C="halloween-2026-v10";
 const A=["./","./index.html","./style.css","./app.js","./fx.js","./extra.js","./noc-duchu.webmanifest","./icon-192.png","./icon-512.png","./apple-touch-icon.png","./griffy0.woff2","./griffy1.woff2",
 "./img/mapa.jpg","./img/zvonky.jpg","./img/mriz.jpg","./img/kopec.jpg","./img/hydrant.jpg","./img/truhla.jpg","./img/cedule.jpg","./img/kotlik.jpg","./img/monstra.jpg","./img/d_boo.jpg","./img/d_hroch.jpg","./img/d_sluzba.jpg","./img/d_pirat.jpg","./img/kontejner.jpg","./img/park8.jpg","./img/lavicky.jpg","./img/qr.png","./voice/zvonek.mp3","./voice/skret.mp3","./voice/kopec.mp3","./voice/trpaslik.mp3","./voice/truhla.mp3","./voice/cedule.mp3","./voice/kotlik.mp3","./voice/monstra.mp3","./voice/duch.mp3","./voice/hroch.mp3","./voice/zachranari.mp3","./voice/pirat.mp3","./voice/popelnice.mp3","./voice/parkoviste.mp3","./voice/vyti.mp3"];
 // cache:"reload" = stahnout ze site, ne ze stare pameti prohlizece

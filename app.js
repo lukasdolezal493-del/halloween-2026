@@ -100,6 +100,7 @@ function go(name) {
   $("#s-" + name).classList.add("on");
   if (cur === "cam" && name !== "cam") stopCamView();
   if (cur === "task" && name !== "task") stopSpeak();
+  if (cur === "hunt" && name !== "hunt") stopHunt();
   cur = name; window.scrollTo(0, 0);
   if (name === "main") renderMain();
   if (name === "map") { $("#mapscroll").classList.remove("zoom"); $("#b-zoom").textContent = "🔍 Přiblížit"; renderMap(); }
@@ -438,7 +439,7 @@ function renderTask() {
   } else {
     h += `<div class="q">${esc(t.q)}</div>`;
     if (t.type === "answer") h += `<input id="ans" inputmode="numeric" autocomplete="off" placeholder="?"><button class="btn big" id="chk">Zkontrolovat</button>`;
-    if (t.type === "photo") h += `<button class="btn big" id="ph">📸 Vyfotit</button><p class="muted small center">Baterka 🔦 vpravo dole svítí i při focení.</p>`;
+    if (t.type === "photo") h += (t.id === "vyti" ? howlHtml() : "") + `<button class="btn big" id="ph">📸 Vyfotit</button><p class="muted small center">Baterka 🔦 vpravo dole svítí i při focení.</p>`;
     if (t.type === "quota") h += quotaHtml(t);
   }
   $("#task-body").innerHTML = h;
@@ -479,6 +480,7 @@ function bindTask(t) {
   const ls = $("#letskip");
   if (ls) ls.onclick = () => askPin("Dospělý: prozradit písmeno?", () => { S.letters[t.id] = t.letter; save(); toast("Písmeno je " + t.letter); award(t); });
   if (t.type === "quota" && !S.done[t.id] && !(t.letter && stepDone(t))) bindQuota(t);
+  bindHowl();
 }
 // kvoty
 function qget(t) { return S.quota[t.id] || (S.quota[t.id] = {}); }
@@ -541,8 +543,9 @@ function renderMap() {
   if (S.finished) {
     $("#map-sub").textContent = "Poklad je odemčený! Běžte k červenému X!";
     $("#map-final").innerHTML = `<div class="next center"><h2>💰 Poklad!</h2><p>Mlsky jsou schované u červeného <b>X</b>.</p>${S.note ? `<p class="q">${esc(S.note)}</p>` : ""}<p class="muted small">Posviťte si baterkou a hledejte!</p></div>
+      <button class="btn big hunt-go" id="mf-hunt">🔥 Přihořívá – hledat poklad</button>
       <div class="row"><button class="btn" id="mf-dip">🏆 Diplom</button><button class="btn ghost" id="mf-show">🎬 Promítání</button></div>`;
-    $("#mf-dip").onclick = () => go("diplom"); $("#mf-show").onclick = startShow;
+    $("#mf-hunt").onclick = startHunt; $("#mf-dip").onclick = () => go("diplom"); $("#mf-show").onclick = startShow;
   } else if (all) {
     const got = TASKS.filter(t => t.letter).map(t => S.letters[t.id] || "_").join(" ");
     $("#map-final").innerHTML = `<div class="next center"><h3>🔒 Tajné heslo</h3><p>Svítící písmena, která jste našli:</p><div class="found">${got}</div>

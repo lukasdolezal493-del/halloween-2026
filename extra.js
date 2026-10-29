@@ -250,7 +250,7 @@ function scare() {
 }
 setInterval(() => {
   if (!S.scare || S.scare === "off" || S.finished || !S.done.probuzeni || document.hidden) return;
-  if (!["main", "task", "map", "gallery"].includes(cur) || !$("#pin").hidden || !$("#award").hidden || !$("#pcheck").hidden || !$("#morph").hidden || SH) return;
+  if (!["main", "task", "map", "gallery"].includes(cur) || !$("#pin").hidden || !$("#award").hidden || !$("#pcheck").hidden || !$("#morph").hidden || SH || REC) return;
   if (!nextScare) { planScare(); return; }
   if (Date.now() >= nextScare) { scare(); planScare(); }
 }, 15000);
@@ -278,10 +278,13 @@ async function voiceBuf(id) {
 }
 // kdo cte: Vlasta = carodejnice (chvejivejsi, svetlejsi), ostatni Antonin = strazce noci
 const WITCH = ["kopec", "truhla", "kotlik", "duch", "hroch", "pirat", "parkoviste"];
+function spookyIR(a) { // dozvuk: dlouhy doznivajici sum
+  IR = a.createBuffer(2, a.sampleRate * 2.8, a.sampleRate);
+  for (let ch = 0; ch < 2; ch++) { const d = IR.getChannelData(ch); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3.2); }
+}
 function spookyPlay(buf, id) {
   const w = WITCH.includes(id), a = ac(), t = a.currentTime + 0.05, RATE = w ? 0.94 : 0.9;
-  if (!IR) { IR = a.createBuffer(2, a.sampleRate * 2.8, a.sampleRate);
-    for (let ch = 0; ch < 2; ch++) { const d = IR.getChannelData(ch); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3.2); } }
+  if (!IR) spookyIR(a);
   const s = a.createBufferSource(); s.buffer = buf; s.playbackRate.value = RATE;
   const lo = a.createBiquadFilter(); lo.type = "lowshelf"; lo.frequency.value = 220; lo.gain.value = w ? 2 : 5;
   const dry = a.createGain(); dry.gain.value = 0.85;
@@ -339,3 +342,81 @@ $("#p-voice").onclick = e => { const b = e.target.closest("button"); if (!b) ret
 $("#p-amb").onclick = e => { const b = e.target.closest("button"); if (!b) return; S.amb = b.dataset.v === "1"; save(); S.amb ? startAmb() : stopAmb(); paintFxSet(); };
 $("#p-scare-test").onclick = () => scare();
 $("#p-voice-test").onclick = () => speakTask(TASKS[1], true);
+
+// ---------- PRIHORIVA: hledani pokladu podle GPS (po odemceni) ----------
+const HUNT_LV = [ // [do metru, text, barva]
+  [10, "🔥🔥🔥 HOŘÍ! Posviťte baterkou kolem sebe!", "#ff2a00"], [20, "🔥 Přihořívá!", "#ff7a00"],
+  [40, "🌤️ Vlažné…", "#d8a800"], [80, "❄️ Zima", "#3a8dde"], [1e9, "🧊 Samá voda!", "#1d3fa8"]];
+let HU = null;
+function geoDist(a, b) {
+  const R = 6371000, r = x => x * Math.PI / 180, dLa = r(b.lat - a.lat), dLo = r(b.lon - a.lon);
+  const h = Math.sin(dLa / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLo / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function startHunt() {
+  if (!navigator.geolocation) { toast("Tenhle telefon neumí zjistit polohu. Hledejte podle mapy!"); return; }
+  stopHunt(); go("hunt"); ambDuck(true);
+  HU = { d: null, hist: [], hot: false };
+  $("#hu-txt").textContent = "Hledám signál… 🛰️"; $("#hu-trend").textContent = ""; $("#hu-acc").textContent = "";
+  $("#hu-ball").style.background = "#333";
+  HU.watch = navigator.geolocation.watchPosition(pos => {
+    if (!HU) return;
+    const me = { lat: pos.coords.latitude, lon: pos.coords.longitude }, tr = S.treasure || DEFAULT_TREASURE;
+    const d = geoDist(me, tr), now = Date.now(); HU.d = d; HU.hist.push([now, d]); HU.hist = HU.hist.filter(h => now - h[0] < 12000);
+    const lv = HUNT_LV.find(l => d <= l[0]);
+    $("#hu-txt").textContent = lv[1]; $("#hu-ball").style.background = lv[2];
+    $("#s-hunt").style.background = `radial-gradient(circle at 50% 40%, ${lv[2]}55, var(--bg) 70%)`;
+    const old = HU.hist[0][1], diff = d - old; // trend za poslednich ~10 s
+    $("#hu-trend").textContent = HU.hist.length < 2 || Math.abs(diff) < 3 ? "" : diff < 0 ? "⬆️ Jdete správně, blíž!" : "⬇️ Pozor, vzdalujete se!";
+    $("#hu-acc").textContent = `GPS přesnost asi ±${Math.round(pos.coords.accuracy)} m`;
+    if (d <= 10 && !HU.hot) { HU.hot = true; sndWin(); vib([200, 80, 200, 80, 400]); }
+    if (d > 15) HU.hot = false;
+  }, err => {
+    if (!HU) return;
+    $("#hu-txt").textContent = err.code === 1 ? "Povol appce polohu (zámek vedle adresy), jinak to nepůjde." : "Signál GPS se ztratil… zkuste vyjít víc na volno.";
+  }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
+  const beep = () => { if (!HU) return; const d = HU.d;
+    if (d != null) { tone(d <= 10 ? 1046 : d <= 20 ? 880 : 660, 0, 0.08, "square", 0.12); if (d <= 20) vib(d <= 10 ? 90 : 40); }
+    HU.bt = setTimeout(beep, d == null ? 1500 : Math.max(160, Math.min(2500, d * 30))); };
+  beep();
+}
+function stopHunt() { if (!HU) return; try { navigator.geolocation.clearWatch(HU.watch); } catch (e) {} clearTimeout(HU.bt); HU = null; ambDuck(false); }
+$("#hu-back").onclick = () => { stopHunt(); go("map"); };
+
+// ---------- VLCI VYTI: nahraj 5 s a prehraj s ozvenou ve skalach ----------
+let HOWL = null, REC = false;
+function howlHtml() {
+  return `<div class="howl"><h3>🎙️ Vlčí smečka</h3><p class="small">Nahrajte, jak všichni spolu vyjete. Pak si to pusťte s ozvěnou jako v horách!</p>
+    <button class="btn" id="hw-rec">🎙️ Nahrát vytí (5 s)</button><button class="btn ghost" id="hw-play" ${HOWL ? "" : "hidden"}>▶️ Pustit vytí znovu</button></div>`;
+}
+function bindHowl() {
+  const r = $("#hw-rec"); if (!r) return;
+  r.onclick = async () => {
+    if (REC) return; let st;
+    try { st = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } }); }
+    catch (e) { toast("Povol appce mikrofon, jinak nahrávání nepůjde."); return; }
+    stopSpeak(); ambDuck(true); REC = true; const chunks = [], mr = new MediaRecorder(st);
+    mr.ondataavailable = e => e.data.size && chunks.push(e.data);
+    mr.onstop = async () => {
+      st.getTracks().forEach(t => t.stop()); REC = false; r.disabled = false; r.textContent = "🎙️ Nahrát znovu";
+      try { HOWL = await ac().decodeAudioData(await new Blob(chunks).arrayBuffer()); $("#hw-play").hidden = false; howlPlay(); }
+      catch (e) { toast("Nahrávka se nepovedla, zkuste to znovu."); ambDuck(false); }
+    };
+    let n = 5; r.disabled = true; r.textContent = `🔴 Vyjte! ${n}`; mr.start(); vib(60);
+    const tick = setInterval(() => { n--; if (n > 0) r.textContent = `🔴 Vyjte! ${n}`; else { clearInterval(tick); r.textContent = "⏳ Chvilku…"; mr.stop(); } }, 1000);
+  };
+  $("#hw-play").onclick = () => howlPlay();
+}
+function howlPlay() {
+  if (!HOWL) return; const a = ac(), t = a.currentTime + 0.05;
+  if (!IR) spookyIR(a);
+  const s = a.createBufferSource(); s.buffer = HOWL; s.playbackRate.value = 0.88; // trochu hlubsi, vic vlci
+  const pre = a.createGain(); pre.gain.value = 1.6; const out = a.createGain(); out.gain.value = 1;
+  const conv = a.createConvolver(); conv.buffer = IR; const wet = a.createGain(); wet.gain.value = 0.6;
+  s.connect(pre); pre.connect(out); pre.connect(conv); conv.connect(wet); wet.connect(out);
+  [[0.45, 0.55], [0.9, 0.38], [1.4, 0.24], [2.0, 0.14]].forEach(([dt, g]) => { // ozvena odrazena od skal
+    const dl = a.createDelay(3), gg = a.createGain(), lp = a.createBiquadFilter(); dl.delayTime.value = dt; gg.gain.value = g; lp.type = "lowpass"; lp.frequency.value = 2500 - dt * 700;
+    pre.connect(dl); dl.connect(lp); lp.connect(gg); gg.connect(out); });
+  out.connect(a.destination); s.start(t); ambDuck(true);
+  s.onended = () => setTimeout(() => ambDuck(false), 2500);
+}

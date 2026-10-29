@@ -324,6 +324,7 @@ function startAmb() {
   const l2 = a.createOscillator(), l2g = a.createGain(); l2.frequency.value = 0.11; l2g.gain.value = 0.04; l2.connect(l2g); l2g.connect(g.gain);
   s.connect(fl); fl.connect(g); g.connect(out); out.connect(ambBus(a)); s.start(); l1.start(); l2.start();
   AMB = { nodes: [s, l1, l2, ...ambDrone(a, out)], out, duck: false }; // vitr + stale temny podton
+  sfxBuf(a, "vitr").then(b => { if (!AMB) return; const w = a.createBufferSource(), wg = a.createGain(); w.buffer = b; w.loop = true; wg.gain.value = 0.5; w.connect(wg); wg.connect(out); w.start(); AMB.nodes.push(w); }).catch(() => {}); // skutecne kvileni vetru
   const evt = () => { if (!AMB) return; if (!AMB.duck) ambRandom(); AMB.et = setTimeout(evt, rand(10, 25) * 1000); }; // hrom, dvere, vlk...
   AMB.et = setTimeout(evt, rand(6, 12) * 1000);
 }
@@ -343,7 +344,7 @@ $("#p-voice").onclick = e => { const b = e.target.closest("button"); if (!b) ret
 $("#p-amb").onclick = e => { const b = e.target.closest("button"); if (!b) return; S.amb = b.dataset.v === "1"; save(); S.amb ? startAmb() : stopAmb(); paintFxSet(); };
 $("#p-scare-test").onclick = () => scare();
 $("#p-voice-test").onclick = () => speakTask(TASKS[1], true);
-$("#p-amb-test").onclick = () => { const a = ac(), bus = ambBus(a); let d = 0; Object.keys(AMB_W).forEach(k => { setTimeout(() => { toast(AMB_NAMES[k]); ambEvent(a, bus, a.currentTime + 0.05, k).catch(() => {}); }, d * 1000); d += ["ukolebavka", "broukani"].includes(k) ? 17 : 7; }); };
+$("#p-amb-test").onclick = () => { const a = ac(), bus = ambBus(a); let d = 0; Object.keys(AMB_W).forEach(k => { setTimeout(() => { toast(AMB_NAMES[k]); ambEvent(a, bus, a.currentTime + 0.05, k).catch(() => {}); }, d * 1000); d += k === "hororovka" ? 30 : k === "scena" ? 18 : k === "broukani" ? 14 : 8; }); };
 
 // ---------- PRIHORIVA: hledani pokladu podle GPS (po odemceni) ----------
 const HUNT_LV = [ // [do metru, text, barva]
@@ -444,10 +445,6 @@ function lullNotes(a, t, beat) { // vybere ukolebavku, zpomaluje se a rozlaďuje
   return out;
 }
 const AMBFX = {
-  ukolebavka(a, out, t) { // hraci strojek: kovove zvonky, rozladene, zpomaluji
-    lullNotes(a, t, rand(0.42, 0.55)).forEach(([t0, f]) => [[1, 0.5, 1.4], [3.01, 0.18, 0.5], [5.4, 0.07, 0.25]].forEach(([m, v, len]) => {
-      const o = a.createOscillator(), g = a.createGain(); o.frequency.value = f * m; env(g, t0, 0.003, len, v); o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + len + 0.05); }));
-  },
   broukani(a, out, t) { // detske broukani „uuu“ ukolebavky (samohlaska z formantu)
     const notes = lullNotes(a, t, rand(0.55, 0.7)).slice(0, 8), end = notes[notes.length - 1][0] + notes[notes.length - 1][2];
     const o = a.createOscillator(), v = a.createOscillator(), vg = a.createGain(), g = a.createGain(), mix = a.createGain(); o.type = "sawtooth";
@@ -478,12 +475,6 @@ const AMBFX = {
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.4, t + len); g.gain.setValueAtTime(0.0001, t + len + 0.01); s.connect(bp); bp.connect(g); g.connect(out); s.start(t);
     thump(a, out, t + len, 60, 0.8, 1);
   },
-  havran(a, out, t) { // tri zakrakani
-    for (let i = 0; i < 3; i++) { const t0 = t + i * 0.42 + Math.random() * 0.08, o = a.createOscillator(), bp = a.createBiquadFilter(), g = a.createGain(), s = a.createBufferSource(), sg = a.createGain();
-      o.type = "sawtooth"; o.frequency.setValueAtTime(820, t0); o.frequency.exponentialRampToValueAtTime(520, t0 + 0.22);
-      s.buffer = nBuf(a, 0.3); sg.gain.value = 0.5; bp.type = "bandpass"; bp.frequency.value = 1400; bp.Q.value = 2.5;
-      o.connect(bp); s.connect(sg); sg.connect(bp); env(g, t0, 0.02, 0.26, 0.5); bp.connect(g); g.connect(out); o.start(t0); o.stop(t0 + 0.3); s.start(t0); }
-  },
   retezy(a, out, t) { // rinceni retezu
     for (let i = 0; i < 14; i++) { const t0 = t + Math.random() * 1.4;
       [2100, 3370, 5150].forEach((f, k) => { const o = a.createOscillator(), g = a.createGain(); o.frequency.value = f * (0.95 + Math.random() * 0.1);
@@ -499,19 +490,19 @@ const AMBFX = {
     v.frequency.value = 4; vg.gain.value = 12; v.connect(vg); vg.connect(o.frequency); og.gain.value = 0.25; o.connect(og); og.connect(g);
     env(g, t, 0.8, len, 0.6); g.connect(out); s.start(t); o.start(t); v.start(t); o.stop(t + len); v.stop(t + len);
   },
-  srdce(a, out, t) { let tt = t; for (let i = 0; i < 7; i++) { thump(a, out, tt, 62, 0.16, 0.9); thump(a, out, tt + 0.22, 52, 0.2, 0.6); tt += 0.85 - i * 0.06; } },
   klepani(a, out, t) { [0, 0.32, 0.64, 1.6, 1.85].forEach(d => { thump(a, out, t + d, 170, 0.12, 0.7); burst(a, out, t + d, 0.05, "bandpass", 420, 2.5, 0.8); }); },
   kroky(a, out, t) { for (let i = 0; i < 7; i++) { const t0 = t + i * 0.55 + Math.random() * 0.04, v = 0.3 + i * 0.1; burst(a, out, t0, 0.09, "lowpass", 450, 0.7, v); burst(a, out, t0 + 0.01, 0.12, "bandpass", 2600, 1.2, v * 0.35); } },
   zvon(a, out, t) { for (let i = 0; i < 3; i++) { const t0 = t + i * 2.1;
     [[0.5, 4.5, 0.25], [1, 3.8, 0.35], [1.19, 2.8, 0.2], [1.56, 2.2, 0.15], [2, 2, 0.12], [2.51, 1.5, 0.08], [3.01, 1.2, 0.06]].forEach(([m, len, v]) => {
       const o = a.createOscillator(), g = a.createGain(); o.frequency.value = 196 * m; env(g, t0, 0.005, len, v); o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + len + 0.05); }); } }
 };
-const AMB_REC = { dvere: ["dvere1", "dvere2", "dvere4", "dvere5"], hrom: ["hrom1", "hrom2"], vlk: ["vlk1"], sova: ["sova1", "sova2"], chechot: ["chechot1", "chechot2", "chechot3"], krik: ["krik1"] };
+const AMB_REC = { dvere: ["dvere1", "dvere2", "dvere4", "dvere5"], hrom: ["hrom1", "hrom2"], vlk: ["vlk1"], sova: ["sova1", "sova2"], chechot: ["chechot1", "chechot2", "chechot3"], krik: ["krik1"],
+  havran: ["havran1", "havran2", "vrana1"], srdce: ["srdce1"], scena: ["scena1"] };
 // jak casto (vaha) a jak nahlas (srovnano merenim)
-const AMB_W = { dvere: 4, hrom: 2, vlk: 1.5, sova: 1.5, chechot: 3, krik: 0.6, ukolebavka: 3, broukani: 2, psycho: 1, bum: 1.2, napeti: 1, havran: 1, retezy: 1, duch: 1, srdce: 1, klepani: 1, kroky: 1, zvon: 0.7 };
-const AMB_LVL = { dvere: 1, hrom: 1, vlk: 1, sova: 1, chechot: 1, krik: 1, ukolebavka: 1, broukani: 1, psycho: 1, bum: 1, napeti: 1, havran: 3.5, retezy: 2.6, duch: 0.95, srdce: 0.6, klepani: 1.1, kroky: 3.5, zvon: 0.25 };
-const AMB_NAMES = { dvere: "🚪 skřípání dveří", hrom: "⛈️ hrom", vlk: "🐺 vlk", sova: "🦉 sova", chechot: "🧙 chechot ježibaby", krik: "😱 výkřik", ukolebavka: "🎶 hrací strojek", broukani: "👧 broukání ukolébavky",
-  psycho: "🎻 lekačka – housle", bum: "💥 lekačka – BUM", napeti: "📈 lekačka – napětí", havran: "🐦‍⬛ havran", retezy: "⛓️ řetězy", duch: "👻 duch", srdce: "💓 srdce", klepani: "✊ klepání", kroky: "👣 kroky", zvon: "🔔 zvon" };
+const AMB_W = { hororovka: 4, dvere: 4, chechot: 3, hrom: 2, vlk: 1.5, sova: 1.5, havran: 1.5, srdce: 1, scena: 1, krik: 0.5, broukani: 1, psycho: 1, bum: 1, napeti: 1, retezy: 0.7, duch: 0.7, klepani: 0.8, kroky: 0.5, zvon: 0.5 };
+const AMB_LVL = { hororovka: 0.85, dvere: 1, chechot: 1, hrom: 1, vlk: 1, sova: 1, havran: 1, srdce: 1, scena: 1, krik: 1, broukani: 1, psycho: 1, bum: 1, napeti: 1, retezy: 2.6, duch: 0.95, klepani: 1.1, kroky: 3.5, zvon: 0.25 };
+const AMB_NAMES = { hororovka: "🎠 dětská hororovka (hrací strojek)", dvere: "🚪 skřípání dveří", chechot: "🧙 chechot ježibaby", hrom: "⛈️ hrom", vlk: "🐺 vlk", sova: "🦉 sova", havran: "🐦‍⬛ havran", srdce: "💓 srdce", scena: "👣 kroky, výkřik a vrčení",
+  krik: "😱 výkřik", broukani: "👧 broukání ukolébavky", psycho: "🎻 lekačka – housle", bum: "💥 lekačka – BUM", napeti: "📈 lekačka – napětí", retezy: "⛓️ řetězy", duch: "👻 duch", klepani: "✊ klepání", kroky: "👣 kroky", zvon: "🔔 zvon" };
 const SFX = {};
 async function sfxBuf(a, id) { if (SFX[id]) return SFX[id]; const r = await fetch(`sfx/${id}.ogg`); if (!r.ok) throw new Error("bez zvuku"); return SFX[id] = await a.decodeAudioData(await r.arrayBuffer()); }
 // zahraj jeden zvuk z dalky: nahodne zleva/zprava, s dozvukem
@@ -519,9 +510,10 @@ async function ambEvent(a, dest, t, name, vol, pick) {
   if (!IR) spookyIR(a);
   const pan = a.createStereoPanner ? a.createStereoPanner() : a.createGain(); if (pan.pan) pan.pan.value = rand(-0.8, 0.8);
   const dry = a.createGain(), conv = a.createConvolver(), wet = a.createGain(), out = a.createGain();
-  dry.gain.value = 0.75; conv.buffer = IR; wet.gain.value = ["ukolebavka", "broukani"].includes(name) ? 0.8 : 0.45; out.gain.value = (vol == null ? 1.25 : vol) * AMB_LVL[name];
+  dry.gain.value = 0.75; conv.buffer = IR; wet.gain.value = ["hororovka", "broukani"].includes(name) ? 0.7 : 0.45; out.gain.value = (vol == null ? 1.25 : vol) * AMB_LVL[name];
   dry.connect(out); conv.connect(wet); wet.connect(out); out.connect(pan); pan.connect(dest);
   const tap = a.createGain(); tap.connect(dry); tap.connect(conv);
+  if (name === "hororovka") { await hororovka(a, tap, t, pick); return; }
   if (AMBFX[name]) { AMBFX[name](a, tap, t); return; }
   const list = AMB_REC[name], id = pick || list[Math.floor(Math.random() * list.length)], buf = await sfxBuf(a, id);
   const s = a.createBufferSource(); s.buffer = buf; if (name === "chechot") s.playbackRate.value = rand(0.82, 0.95); // hlubsi, zlovestnejsi
@@ -548,4 +540,43 @@ function ambBus(a) {
   comp.threshold.value = -18; comp.knee.value = 8; comp.ratio.value = 6; comp.attack.value = 0.005; comp.release.value = 0.25; mk.gain.value = 1.6;
   const lim = a.createDynamicsCompressor(); lim.threshold.value = -3; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.1; // strop: nikdy neprebudi
   comp.connect(mk); mk.connect(lim); lim.connect(a.destination); return comp;
+}
+
+// ---------- DETSKE HOROROVKY: skutecny hraci strojek + desivy podkres ----------
+// Stare detske rikanky (volne dilo), prevedene do moll. [pulton od C5, delka v dobach]
+const RIK = {
+  mary: [[4, 1], [2, 1], [0, 1], [2, 1], [4, 1], [4, 1], [4, 2], [2, 1], [2, 1], [2, 2], [4, 1], [7, 1], [7, 2], [4, 1], [2, 1], [0, 1], [2, 1], [4, 1], [4, 1], [4, 1], [4, 1], [2, 1], [2, 1], [4, 1], [2, 1], [0, 3]],
+  london: [[7, 1.5], [9, .5], [7, 1], [5, 1], [4, 1], [5, 1], [7, 2], [2, 1], [4, 1], [5, 2], [4, 1], [5, 1], [7, 2], [7, 1.5], [9, .5], [7, 1], [5, 1], [4, 1], [5, 1], [7, 2], [2, 2], [7, 2], [4, 1], [0, 3]],
+  rosie: [[7, 1], [7, .5], [4, 1], [9, .5], [7, 1], [4, 1], [5, 1], [7, .5], [7, 1], [4, .5], [9, 1], [7, 1], [4, 1], [7, 1], [7, 1], [4, 2], [7, 1], [7, 1], [4, 2], [7, 1], [7, 1], [0, 3]],
+  rockabye: [[4, 1.5], [7, .5], [4, 1], [2, 1], [0, 1], [4, 1], [7, 2], [12, 1.5], [11, .5], [9, 1], [7, 3], [7, 1.5], [9, .5], [7, 1], [5, 1], [4, 1], [5, 1], [7, 3], [2, 1.5], [4, .5], [5, 1], [4, 1], [2, 1], [0, 3]],
+  weasel: [[0, 1], [0, .5], [2, 1], [2, .5], [4, .5], [7, .5], [4, .5], [0, 1], [0, .5], [2, 1], [2, .5], [4, 1.5], [0, 1], [-5, .5], [0, 1], [0, .5], [2, 1], [2, .5], [4, .5], [7, .5], [4, .5], [0, 1.5], [9, 1.5], [2, 1], [5, .5], [4, 1.5], [0, 2]],
+  kubo: [[0, 1], [2, 1], [4, 1], [0, 1], [0, 1], [2, 1], [4, 1], [0, 1], [4, 1], [5, 1], [7, 2], [4, 1], [5, 1], [7, 2], [7, .5], [9, .5], [7, .5], [5, .5], [4, 1], [0, 1], [7, .5], [9, .5], [7, .5], [5, .5], [4, 1], [0, 1], [0, 1], [-5, 1], [0, 2]]
+};
+const minor = n => [4, 9, 11].includes(((n % 12) + 12) % 12) ? n - 1 : n; // E->Eb, A->Ab, H->B: z durove rikanky je moll
+async function hororovka(a, out, t, pick) {
+  const box = await sfxBuf(a, "strojek1"), BASE = 993; // nahrany ton hraciho strojku (993 Hz)
+  const stings = ["dvere", "chechot", "bum", "psycho"], sting = stings[Math.floor(Math.random() * stings.length)];
+  t = Math.max(t, a.currentTime + 0.05); // po nacteni zvuku uz mohl cas utect
+  const key = pick || Object.keys(RIK)[Math.floor(Math.random() * Object.keys(RIK).length)], mel = RIK[key], beat = rand(0.42, 0.52), root = 523.25 * Math.pow(2, rand(-3, 1) / 12);
+  const t0 = t + 2.5; let tt = t0; const N = mel.length;
+  mel.forEach(([n, d], i) => { // strojek se ke konci dotaci: zpomaluje, rozlaďuje a klesa
+    const wind = Math.max(0, (i - (N - 6)) / 6), f = root * Math.pow(2, minor(n) / 12) * Math.pow(2, (rand(-12, 12) - wind * 90) / 1200);
+    const s = a.createBufferSource(), g = a.createGain(); s.buffer = box; s.playbackRate.value = f / BASE; g.gain.value = 0.9;
+    s.connect(g); g.connect(out); s.start(tt); tt += d * beat * (1 + wind * 0.9) + rand(0, 0.03);
+  });
+  const end = tt + 0.8;
+  // podkres: chvejici se rozladene smycce (pultonovy "cluster"), pomalu nabiha
+  const str = a.createGain(), lp = a.createBiquadFilter(), trem = a.createOscillator(), tg = a.createGain();
+  lp.type = "lowpass"; lp.frequency.setValueAtTime(500, t); lp.frequency.linearRampToValueAtTime(1600, end);
+  trem.frequency.value = 7; tg.gain.value = 0.35; trem.connect(tg); tg.connect(str.gain);
+  str.gain.setValueAtTime(0.0001, t); str.gain.exponentialRampToValueAtTime(0.45, t + 6); str.gain.setValueAtTime(0.45, end - 0.3); str.gain.exponentialRampToValueAtTime(0.0001, end + 0.2);
+  [233.1, 246.9, 349.2, 370].forEach(f => { const o = a.createOscillator(), og = a.createGain(); o.type = "sawtooth"; o.frequency.value = f; o.detune.value = rand(-10, 10); og.gain.value = 0.05; o.connect(og); og.connect(lp); o.start(t); o.stop(end + 0.3); });
+  lp.connect(str); str.connect(out); trem.start(t); trem.stop(end + 0.3);
+  // tichy tep pod tim
+  for (let p = t + 3; p < end - 0.5; p += 1.25) { thump(a, out, p, 58, 0.18, 0.5); thump(a, out, p + 0.24, 50, 0.2, 0.32); }
+  // a na konci lekacka
+  const se = end + 0.15;
+  if (AMBFX[sting]) AMBFX[sting](a, out, se);
+  else { const b = await sfxBuf(a, AMB_REC[sting][Math.floor(Math.random() * AMB_REC[sting].length)]), s = a.createBufferSource(), g = a.createGain(); s.buffer = b; g.gain.value = 1.1; s.connect(g); g.connect(out); s.start(se); }
+  return end + 3 - t; // delka v sekundach
 }

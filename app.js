@@ -82,7 +82,7 @@ const NAMES = {
 // ---------- STAV ----------
 const KEY = "hw26";
 let S = load();
-function fresh() { return { kids: [], done: {}, letters: {}, quota: {}, pin: "5879", treasure: null, note: "", finished: false }; }
+function fresh() { return { kids: [], done: {}, letters: {}, quota: {}, pin: "5879", treasure: null, note: "", finished: false, scare: "obcas", voice: true, amb: true }; }
 function load() {
   try { const j = JSON.parse(localStorage.getItem(KEY)); if (j && j.kids) return Object.assign(fresh(), j); } catch (e) {}
   return fresh();
@@ -99,11 +99,13 @@ function go(name) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("on"));
   $("#s-" + name).classList.add("on");
   if (cur === "cam" && name !== "cam") stopCamView();
+  if (cur === "task" && name !== "task") stopSpeak();
   cur = name; window.scrollTo(0, 0);
   if (name === "main") renderMain();
   if (name === "map") { $("#mapscroll").classList.remove("zoom"); $("#b-zoom").textContent = "🔍 Přiblížit"; renderMap(); }
   if (name === "gallery") renderGallery();
   if (name === "profiles") renderKids();
+  if (name === "diplom") renderDiplom();
 }
 document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
 let toastT;
@@ -229,6 +231,7 @@ function award(t, cb) {
   $("#aw-txt").innerHTML = n >= TASKS.length
     ? "Máte <b>všech 16 kousků mapy</b>! Otevřete mapu pokladu a zadejte tajné heslo."
     : `Odznak získán! Přibyl <b>${n}. kousek mapy</b> z 16.`;
+  if (S.haunted && S.haunted[t.id]) $("#aw-txt").innerHTML += `<br><br>👀 Počkat… na vaší fotce je <b>něco divného</b>! Mrkněte do Úlovků.`;
   $("#award").hidden = false; sndWin(); vib([80, 60, 160]);
   awardCb = cb;
 }
@@ -377,7 +380,7 @@ $("#ed-save").onclick = () => {
   const raw = document.createElement("canvas"); raw.width = raw.height = 300; raw.getContext("2d").drawImage(ED.photo, 0, 0, 300, 300);
   const kid = { name: ED.name, age: ED.age, sex: ED.sex, stickers: ED.stickers, avatar: small.toDataURL("image/jpeg", 0.75), raw: raw.toDataURL("image/jpeg", 0.7) };
   if (ED.idx >= 0) S.kids[ED.idx] = kid; else S.kids.push(kid);
-  save(); sndBoo(); $("#ed-video").srcObject = null; stopStream(); go("profiles");
+  save(); $("#ed-video").srcObject = null; stopStream(); morph(ED.photo, c, ED.name, () => go("profiles"));
 };
 
 // ---------- HLAVNI ----------
@@ -407,6 +410,8 @@ function renderMain() {
 }
 $("#b-map").onclick = () => go("map");
 $("#b-gallery").onclick = () => go("gallery");
+$("#g-show").onclick = () => startShow();
+$("#g-dip").onclick = () => go("diplom");
 
 // ---------- UKOL ----------
 let TI = 0;
@@ -414,10 +419,12 @@ function openTask(i) {
   TI = i; const t = TASKS[i];
   if (t.type === "profiles") { go("profiles"); return; }
   go("task"); renderTask();
+  if (S.voice && !S.done[t.id]) setTimeout(() => { if (cur === "task" && TI === i) speakTask(t); }, 350);
 }
 function renderTask() {
   const t = TASKS[TI], cap = captainFor(TI), done = S.done[t.id];
   let h = `<div class="task-hero"><div class="e">${t.e}</div><h2>${esc(t.title)}</h2></div>
+    <button class="btn ghost small say" id="say">🔊 Přečíst nahlas</button>
     <p class="story">${esc(t.story)}</p>
     ${t.hint ? `<p class="muted small">🔎 Kde jsme tohle viděli?</p>` : ""}
     ${showImg(t) ? `<img class="hintimg" src="img/${t.img}.jpg" alt="">` : ""}
@@ -451,6 +458,7 @@ function letterHtml() {
     <button class="btn ghost small" id="letskip">Nemůžeme ho najít (dospělý)</button></div>`;
 }
 function bindTask(t) {
+  $("#say").onclick = () => speakTask(t, true);
   const chk = $("#chk");
   if (chk) chk.onclick = () => {
     const v = $("#ans").value.trim().toLowerCase().replace(/\s/g, "");
@@ -460,7 +468,7 @@ function bindTask(t) {
   const ph = $("#ph");
   if (ph) ph.onclick = () => openCam(p => {
     if (!p) return;
-    askPin("Dospělý: schvaluješ fotku?", () => { savePhoto(t.id, p); finishMain(t); });
+    askPin("Dospělý: schvaluješ fotku?", () => hauntPhoto(t.id, p, q => { savePhoto(t.id, q); finishMain(t); }));
   });
   const lo = $("#letok");
   if (lo) lo.onclick = () => {
@@ -532,7 +540,9 @@ function renderMap() {
   $("#map-sub").textContent = all ? "Mapa je celá! Zadejte heslo." : `Máte ${n} z 16 kousků. Plňte úkoly a mapa se poskládá.`;
   if (S.finished) {
     $("#map-sub").textContent = "Poklad je odemčený! Běžte k červenému X!";
-    $("#map-final").innerHTML = `<div class="next center"><h2>💰 Poklad!</h2><p>Mlsky jsou schované u červeného <b>X</b>.</p>${S.note ? `<p class="q">${esc(S.note)}</p>` : ""}<p class="muted small">Posviťte si baterkou a hledejte!</p></div>`;
+    $("#map-final").innerHTML = `<div class="next center"><h2>💰 Poklad!</h2><p>Mlsky jsou schované u červeného <b>X</b>.</p>${S.note ? `<p class="q">${esc(S.note)}</p>` : ""}<p class="muted small">Posviťte si baterkou a hledejte!</p></div>
+      <div class="row"><button class="btn" id="mf-dip">🏆 Diplom</button><button class="btn ghost" id="mf-show">🎬 Promítání</button></div>`;
+    $("#mf-dip").onclick = () => go("diplom"); $("#mf-show").onclick = startShow;
   } else if (all) {
     const got = TASKS.filter(t => t.letter).map(t => S.letters[t.id] || "_").join(" ");
     $("#map-final").innerHTML = `<div class="next center"><h3>🔒 Tajné heslo</h3><p>Svítící písmena, která jste našli:</p><div class="found">${got}</div>
@@ -542,7 +552,7 @@ function renderMap() {
     ins.forEach((el, i) => el.oninput = () => { el.value = el.value.toUpperCase(); if (el.value && ins[i + 1]) ins[i + 1].focus(); });
     $("#pw-ok").onclick = () => {
       const v = ins.map(i => i.value.trim().toUpperCase()).join("");
-      if (v === HESLO) { S.finished = true; save(); sndWin(); setTimeout(sndBoo, 700); vib([100, 50, 100, 50, 300]); renderMap(); window.scrollTo(0, 0); }
+      if (v === HESLO) { S.finished = true; S.endAt = Date.now(); save(); renderMap(); window.scrollTo(0, 0); finale(); }
       else { sndBad(); vib([60, 40, 60]); toast("Špatné heslo! Zkuste písmena poskládat správně."); }
     };
   } else $("#map-final").innerHTML = "";
@@ -558,7 +568,8 @@ $("#b-zoom").onclick = () => { const z = $("#mapscroll").classList.toggle("zoom"
 function renderGallery() {
   const items = TASKS.map(t => ({ t, p: getPhoto(t.id) })).filter(x => x.p);
   const kids = S.kids.map(k => `<figure><img src="${k.avatar}" alt=""><figcaption>${esc(k.name)}</figcaption></figure>`).join("");
-  $("#gal").innerHTML = kids + items.map(x => `<figure><img src="${x.p}" alt=""><figcaption>${x.t.e} ${esc(x.t.title)}</figcaption></figure>`).join("");
+  $("#gal").innerHTML = kids + items.map(x => `<figure><img src="${x.p}" alt=""><figcaption>${x.t.e} ${esc(x.t.title)}${S.haunted && S.haunted[x.t.id] ? " 👻?!" : ""}</figcaption></figure>`).join("");
+  $("#g-dip").hidden = !S.finished;
 }
 
 // ---------- RODIC ----------
@@ -566,7 +577,7 @@ $("#b-parent").onclick = () => askPin("PIN strážce hry", () => { renderParent(
 function renderParent() {
   const tr = S.treasure || DEFAULT_TREASURE;
   $("#p-treasure-txt").textContent = S.treasure ? "Poklad je schovaný tam, kde jsi klepnul na mapě." : "Zatím výchozí místo: oranžová bedna (Truhla) pod cedulí VÝJEZD.";
-  $("#p-note").value = S.note || "";
+  $("#p-note").value = S.note || ""; paintFxSet();
   $("#p-cheat").innerHTML = `<div class="cheat">${TASKS.slice(1).map((t, i) => `<div>${i + 1}. ${t.e} <b>${esc(t.title)}</b>: ${t.type === "answer" ? "odpověď " + t.a[0] : t.type === "quota" ? t.total + " " + t.unit : "fotka"}${t.letter ? ` · písmeno <b>${t.letter}</b>` : ""}</div>`).join("")}<div>🔑 Heslo: <b>${HESLO}</b></div></div>`;
 }
 $("#p-note").oninput = e => { S.note = e.target.value; save(); };
@@ -588,9 +599,9 @@ $("#p-update").onclick = async () => {
 };
 $("#p-reset").onclick = () => {
   if (!confirm("Opravdu smazat celou hru (strašidla, fotky, postup)?")) return;
-  const pin = S.pin, tr = S.treasure, note = S.note;
+  const pin = S.pin, tr = S.treasure, note = S.note, set = { scare: S.scare, voice: S.voice, amb: S.amb };
   try { Object.keys(localStorage).filter(k => k.startsWith("hw26")).forEach(k => localStorage.removeItem(k)); } catch (e) {}
-  S = fresh(); S.pin = pin; S.treasure = tr; S.note = note; save(); go("intro");
+  S = fresh(); S.pin = pin; S.treasure = tr; S.note = note; Object.assign(S, set); save(); go("intro");
 };
 // tlacitko Zpet z vyberu pokladu
 document.querySelector("#s-map .back").onclick = () => { if (picking) { picking = false; renderParent(); go("parent"); } else go("main"); };

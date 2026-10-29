@@ -150,7 +150,18 @@
 <section id="s-gallery" class="screen">
   <button class="back" data-go="main">‹ Zpět</button>
   <h2>Úlovky</h2>
+  <div class="row"><button class="btn" id="g-show">🎬 Promítání</button><button class="btn ghost" id="g-dip" hidden>🏆 Diplom</button></div>
   <div id="gal" class="gal"></div>
+</section>
+
+<!-- DIPLOM -->
+<section id="s-diplom" class="screen">
+  <button class="back" data-go="map">‹ Zpět</button>
+  <h2>🏆 Diplom</h2>
+  <p class="muted small" id="dip-wait">Maluju diplom…</p>
+  <img id="dip-img" class="dip" alt="Diplom Strážci Noci duchů">
+  <div class="row"><button class="btn" id="dip-save">💾 Uložit</button><button class="btn ghost" id="dip-share">📤 Poslat</button></div>
+  <p class="muted small center">Uložený diplom najdeš ve Stažených souborech a můžeš ho vytisknout.</p>
 </section>
 
 <!-- RODIC -->
@@ -173,10 +184,21 @@
     <button class="btn danger" id="p-reset">🗑️ Začít celou hru znovu</button>
   </div>
   <div class="card">
+    <h3>👻 Strašidelné efekty</h3>
+    <label class="lbl">😱 Lekačky po cestě (duch vyskočí a zakvílí)</label>
+    <div class="row seg" id="p-scare"><button data-v="off">vypnuto</button><button data-v="obcas">občas</button><button data-v="casto">často</button></div>
+    <button class="btn ghost small" id="p-scare-test">Vyzkoušet lekačku</button>
+    <label class="lbl">🗣️ Číst úkoly nahlas</label>
+    <div class="row seg" id="p-voice"><button data-v="1">ano</button><button data-v="0">ne</button></div>
+    <button class="btn ghost small" id="p-voice-test">Vyzkoušet hlas</button>
+    <label class="lbl">🌬️ Zvuky v pozadí (vítr, sova)</label>
+    <div class="row seg" id="p-amb"><button data-v="1">ano</button><button data-v="0">ne</button></div>
+  </div>
+  <div class="card">
     <h3>Tahák – odpovědi</h3>
     <div id="p-cheat" class="small"></div>
   </div>
-  <p class="muted small center">verze 5</p>
+  <p class="muted small center">verze 7</p>
 </section>
 
 <!-- PIN -->
@@ -204,6 +226,32 @@
 <video id="torch-video" playsinline muted autoplay class="hidden-video"></video>
 
 <script src="fx.js"></script>
+<!-- PROMENA -->
+<div id="morph" class="modal" hidden>
+  <div class="modal-in center">
+    <h3>⚡ Probouzení…</h3>
+    <canvas id="mo-c" width="600" height="600"></canvas>
+    <h2 id="mo-name" class="mo-name"></h2>
+    <button class="btn big" id="mo-ok" hidden>Strašidelné! 👻</button>
+  </div>
+</div>
+<!-- FINALE -->
+<div id="finale" class="modal" hidden>
+  <div id="fi-bats"></div>
+  <div class="modal-in center fi">
+    <div class="badge-big">🔓</div>
+    <h2>POKLAD ODEMČEN!</h2>
+    <div id="fi-team"></div>
+    <p>Strážci Noci duchů, <b>dokázali jste to!</b> Mlsoun Chřestivý je poražen.</p>
+    <button class="btn big" id="fi-ok">🗺️ Kde je poklad?</button>
+  </div>
+</div>
+<!-- LEKACKA -->
+<div id="scare" hidden><canvas id="sc-c" width="400" height="400"></canvas><div class="boo">BÚÚÚ!</div></div>
+<!-- PROMITANI -->
+<div id="show" hidden><img alt=""><img alt=""><div id="show-cap"></div><button id="show-x">✕</button><div class="show-hint">klepni = další</div></div>
+
 <script src="app.js"></script>
+<script src="extra.js"></script>
 </body>
 </html>

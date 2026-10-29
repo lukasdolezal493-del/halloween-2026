@@ -51,6 +51,12 @@ b{color:var(--orange2)}
 #ed-stickers{position:absolute;inset:0}
 .stk{position:absolute;transform:translate(-50%,-50%);line-height:1;user-select:none;touch-action:none;cursor:grab}
 .stk.sel{outline:2px dashed var(--green);outline-offset:4px;border-radius:8px}
+.stk.fxh{border-radius:12px}
+.fxbar{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;margin:6px 0}
+.fxbar button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 2px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--txt);font:600 11px system-ui;line-height:1.15;min-height:44px}
+.fxbar img{width:52px;height:52px;border-radius:8px;display:block}
+#ed-sizebar[hidden]{display:none}
+#ed-sizebar{gap:6px;justify-content:center}
 .stickbar{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:8px 0}
 .stickbar button{font-size:30px;width:52px;height:52px;border-radius:12px;border:1px solid var(--line);background:var(--card)}
 .lbl{display:block;color:var(--muted);font-size:14px;margin:10px 0 4px}

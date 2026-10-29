@@ -59,13 +59,18 @@
       <canvas id="ed-canvas" width="600" height="600"></canvas>
       <div id="ed-stickers"></div>
     </div>
-    <p class="muted small">Klepni na nálepku, pak ji posuň prstem na fotce.</p>
-    <div class="stickbar" id="stickbar"></div>
-    <div class="row" id="ed-sizebar" hidden>
-      <button class="btn small" id="ed-smaller">➖ menší</button>
-      <button class="btn small" id="ed-bigger">➕ větší</button>
+    <div class="row wrap" id="ed-sizebar" hidden>
+      <button class="btn small" id="ed-smaller">➖</button>
+      <button class="btn small" id="ed-bigger">➕</button>
+      <button class="btn small" id="ed-rot">↻</button>
+      <button class="btn small" id="ed-flip">⇆</button>
       <button class="btn small danger" id="ed-del">🗑️</button>
     </div>
+    <p class="muted small">Klepni na efekt, pak ho posuň prstem na fotce. Pod fotkou ho zvětšíš, otočíš nebo zrcadlíš.</p>
+    <label class="lbl">💄 Strašidelný make-up</label>
+    <div class="fxbar" id="fxbar"></div>
+    <label class="lbl">Nálepky</label>
+    <div class="stickbar" id="stickbar"></div>
     <button class="btn ghost small" id="ed-retake">📸 Vyfotit znovu</button>
   </div>
   <div class="card">
@@ -198,6 +203,7 @@
 <button id="torch" class="torch" aria-label="Baterka">🔦</button>
 <video id="torch-video" playsinline muted autoplay class="hidden-video"></video>
 
+<script src="fx.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

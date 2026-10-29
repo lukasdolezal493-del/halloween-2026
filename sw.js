@@ -1,5 +1,5 @@
-const C="halloween-2026-v5";
-const A=["./","./index.html","./style.css","./app.js","./noc-duchu.webmanifest","./icon-192.png","./icon-512.png","./apple-touch-icon.png","./griffy0.woff2","./griffy1.woff2",
+const C="halloween-2026-v6";
+const A=["./","./index.html","./style.css","./app.js","./fx.js","./noc-duchu.webmanifest","./icon-192.png","./icon-512.png","./apple-touch-icon.png","./griffy0.woff2","./griffy1.woff2",
 "./img/mapa.jpg","./img/zvonky.jpg","./img/mriz.jpg","./img/kopec.jpg","./img/hydrant.jpg","./img/truhla.jpg","./img/cedule.jpg","./img/kotlik.jpg","./img/monstra.jpg","./img/d_boo.jpg","./img/d_hroch.jpg","./img/d_sluzba.jpg","./img/d_pirat.jpg","./img/kontejner.jpg","./img/park8.jpg","./img/lavicky.jpg","./img/qr.png"];
 // cache:"reload" = stahnout ze site, ne ze stare pameti prohlizece
 self.addEventListener("install",e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(A.map(u=>new Request(u,{cache:"reload"})))).then(()=>self.skipWaiting()));});

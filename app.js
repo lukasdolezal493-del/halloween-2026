@@ -289,6 +289,10 @@ function spooky(src) { // horror filtr
     p[i] = 20 + g * 150; p[i + 1] = 8 + g * 235; p[i + 2] = 40 + g * 120; // zelenofialovy duotone
   }
   x.putImageData(d, 0, 0);
+  return c;
+}
+function spookyOver() { // vineta + skrabance, kresli se az pres make-up, at splyne s fotkou
+  const c = document.createElement("canvas"); c.width = c.height = 600; const x = c.getContext("2d");
   const rg = x.createRadialGradient(300, 280, 140, 300, 300, 330); rg.addColorStop(0, "rgba(0,0,0,0)"); rg.addColorStop(1, "rgba(10,0,25,.92)");
   x.fillStyle = rg; x.fillRect(0, 0, 600, 600);
   x.strokeStyle = "rgba(255,255,255,.13)"; x.lineWidth = 1.2;
@@ -297,10 +301,29 @@ function spooky(src) { // horror filtr
 }
 function showEdit() {
   $("#ed-cam").hidden = true; $("#ed-edit").hidden = false;
-  ED.filtered = spooky(ED.photo);
-  $("#ed-canvas").getContext("2d").drawImage(ED.filtered, 0, 0);
+  ED.base = spooky(ED.photo); ED.over = spookyOver();
   paintStickers();
 }
+function composeEd(x, withEmoji) {
+  x.globalCompositeOperation = "source-over"; x.drawImage(ED.base, 0, 0);
+  ED.stickers.forEach(s => { if (s.f) drawItem(x, s, 600); });
+  x.globalCompositeOperation = "source-over"; x.drawImage(ED.over, 0, 0);
+  if (withEmoji) ED.stickers.forEach(s => { if (!s.f) drawItem(x, s, 600); });
+}
+let edRaf = 0;
+function renderEd() { if (edRaf || !ED || !ED.base) return; edRaf = requestAnimationFrame(() => { edRaf = 0; composeEd($("#ed-canvas").getContext("2d"), false); }); }
+// nahledy make-upu do tlacitek
+$("#fxbar").innerHTML = Object.keys(FX).map(k => {
+  const c = document.createElement("canvas"); c.width = c.height = 120; const x = c.getContext("2d");
+  x.fillStyle = "#7fc48a"; x.fillRect(0, 0, 120, 120);
+  drawItem(x, { f: k, x: 0.5, y: k === "zuby" || k === "krev" ? 0.3 : 0.5, s: k === "sroub" ? 0.75 : 0.85, seed: 7 }, 120);
+  return `<button data-f="${k}"><img src="${c.toDataURL()}" alt=""><span>${FX[k].n}</span></button>`;
+}).join("");
+$("#fxbar").onclick = e => {
+  const b = e.target.closest("button"); if (!b || !ED) return; const f = FX[b.dataset.f];
+  ED.stickers.push({ f: b.dataset.f, x: f.x || 0.5, y: f.y || 0.5, s: f.s, r: 0, m: false, seed: 1 + Math.floor(Math.random() * 1e6) });
+  ED.sel = ED.stickers.length - 1; sndTap(); paintStickers();
+};
 $("#stickbar").innerHTML = STICKERS.map(s => `<button data-s="${s}">${s}</button>`).join("");
 $("#stickbar").onclick = e => {
   const s = e.target.closest("button"); if (!s || !ED) return;
@@ -308,8 +331,14 @@ $("#stickbar").onclick = e => {
 };
 function paintStickers() {
   const box = $("#ed-stickers"), W = box.clientWidth || 340;
-  box.innerHTML = ED.stickers.map((s, i) => `<div class="stk${i === ED.sel ? " sel" : ""}" data-i="${i}" style="left:${s.x * 100}%;top:${s.y * 100}%;font-size:${s.s * W}px">${s.e}</div>`).join("");
+  const tf = s => `transform:translate(-50%,-50%) rotate(${s.r || 0}rad)${s.m ? " scaleX(-1)" : ""}`;
+  const html = (s, i) => s.f
+    ? `<div class="stk fxh${i === ED.sel ? " sel" : ""}" data-i="${i}" style="left:${s.x * 100}%;top:${s.y * 100}%;width:${s.s * W}px;height:${s.s * W * 0.6}px;${tf(s)}"></div>`
+    : `<div class="stk${i === ED.sel ? " sel" : ""}" data-i="${i}" style="left:${s.x * 100}%;top:${s.y * 100}%;font-size:${s.s * W}px;${tf(s)}">${s.e}</div>`;
+  // make-up pod nalepkami, at jdou nalepky chytit
+  box.innerHTML = ED.stickers.map((s, i) => s.f ? html(s, i) : "").join("") + ED.stickers.map((s, i) => s.f ? "" : html(s, i)).join("");
   $("#ed-sizebar").hidden = ED.sel < 0;
+  renderEd();
 }
 (function dragStickers() {
   const box = $("#ed-stickers"); let drag = -1;
@@ -322,11 +351,14 @@ function paintStickers() {
     ED.stickers[drag].x = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
     ED.stickers[drag].y = Math.max(0, Math.min(1, (e.clientY - r.top) / r.height));
     const el = box.querySelector(`[data-i="${drag}"]`); if (el) { el.style.left = ED.stickers[drag].x * 100 + "%"; el.style.top = ED.stickers[drag].y * 100 + "%"; }
+    if (ED.stickers[drag].f) renderEd();
   });
   const end = () => drag = -1; box.addEventListener("pointerup", end); box.addEventListener("pointercancel", end);
 })();
-$("#ed-bigger").onclick = () => { if (ED.sel >= 0) { ED.stickers[ED.sel].s = Math.min(0.7, ED.stickers[ED.sel].s * 1.2); paintStickers(); } };
+$("#ed-bigger").onclick = () => { if (ED.sel >= 0) { ED.stickers[ED.sel].s = Math.min(1.2, ED.stickers[ED.sel].s * 1.2); paintStickers(); } };
 $("#ed-smaller").onclick = () => { if (ED.sel >= 0) { ED.stickers[ED.sel].s = Math.max(0.06, ED.stickers[ED.sel].s / 1.2); paintStickers(); } };
+$("#ed-rot").onclick = () => { if (ED.sel >= 0) { const s = ED.stickers[ED.sel]; s.r = (s.r || 0) + Math.PI / 12; paintStickers(); } };
+$("#ed-flip").onclick = () => { if (ED.sel >= 0) { const s = ED.stickers[ED.sel]; s.m = !s.m; paintStickers(); } };
 $("#ed-del").onclick = () => { if (ED.sel >= 0) { ED.stickers.splice(ED.sel, 1); ED.sel = -1; paintStickers(); } };
 function paintEdForm() {
   document.querySelectorAll("#ed-age button").forEach(b => b.classList.toggle("on", b.dataset.a === ED.age));
@@ -340,8 +372,7 @@ $("#ed-cancel").onclick = () => { $("#ed-video").srcObject = null; stopStream();
 $("#ed-save").onclick = () => {
   if (!ED.photo) { toast("Nejdřív se vyfoť! 📸"); return; }
   const c = document.createElement("canvas"); c.width = c.height = 600; const x = c.getContext("2d");
-  x.drawImage(ED.filtered, 0, 0); x.textAlign = "center"; x.textBaseline = "middle";
-  ED.stickers.forEach(s => { x.font = `${s.s * 600}px "Segoe UI Emoji","Noto Color Emoji",sans-serif`; x.fillText(s.e, s.x * 600, s.y * 600); });
+  composeEd(x, true);
   const small = document.createElement("canvas"); small.width = small.height = 300; small.getContext("2d").drawImage(c, 0, 0, 300, 300);
   const raw = document.createElement("canvas"); raw.width = raw.height = 300; raw.getContext("2d").drawImage(ED.photo, 0, 0, 300, 300);
   const kid = { name: ED.name, age: ED.age, sex: ED.sex, stickers: ED.stickers, avatar: small.toDataURL("image/jpeg", 0.75), raw: raw.toDataURL("image/jpeg", 0.7) };

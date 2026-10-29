@@ -153,3 +153,8 @@ input:focus{outline:none;border-color:var(--orange)}
 @keyframes pop{0%{transform:scale(.2) rotate(-30deg)}70%{transform:scale(1.2)}100%{transform:scale(1)}}
 #toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:#000e;border:1px solid var(--orange);padding:12px 18px;border-radius:14px;z-index:200;max-width:90%;text-align:center}
 .cheat div{padding:4px 0;border-bottom:1px solid var(--line)}
+
+.share{display:flex;gap:12px;align-items:center;margin:26px 0 8px;padding:10px;border:1px solid var(--line);border-radius:16px;background:var(--card)}
+.share img{flex:none;border-radius:8px;background:#fff}
+.share b{display:block;margin-bottom:3px}
+.share span{font-size:13px;color:var(--muted)}

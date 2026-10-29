@@ -1,9 +1,9 @@
 {
-  "id": "./?app=nocduchu3",
+  "id": "/halloween-2026/noc-duchu",
   "name": "Noc duchů – Černý Důl",
   "short_name": "Noc duchů",
-  "start_url": "./index.html?app=3",
-  "scope": "./",
+  "start_url": "/halloween-2026/index.html",
+  "scope": "/halloween-2026/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#16081f",

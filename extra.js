@@ -239,18 +239,20 @@ async function voiceBuf(id) {
   const r = await fetch(`voice/${id}.mp3`); if (!r.ok) throw new Error("bez nahravky");
   return VBUF[id] = await ac().decodeAudioData(await r.arrayBuffer());
 }
-function spookyPlay(buf) {
-  const a = ac(), t = a.currentTime + 0.05, RATE = 0.9;
+// kdo cte: Vlasta = carodejnice (chvejivejsi, svetlejsi), ostatni Antonin = strazce noci
+const WITCH = ["kopec", "truhla", "kotlik", "duch", "hroch", "pirat", "parkoviste"];
+function spookyPlay(buf, id) {
+  const w = WITCH.includes(id), a = ac(), t = a.currentTime + 0.05, RATE = w ? 0.94 : 0.9;
   if (!IR) { IR = a.createBuffer(2, a.sampleRate * 2.8, a.sampleRate);
     for (let ch = 0; ch < 2; ch++) { const d = IR.getChannelData(ch); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3.2); } }
   const s = a.createBufferSource(); s.buffer = buf; s.playbackRate.value = RATE;
-  const lo = a.createBiquadFilter(); lo.type = "lowshelf"; lo.frequency.value = 220; lo.gain.value = 5;
+  const lo = a.createBiquadFilter(); lo.type = "lowshelf"; lo.frequency.value = 220; lo.gain.value = w ? 2 : 5;
   const dry = a.createGain(); dry.gain.value = 0.85;
   const conv = a.createConvolver(); conv.buffer = IR; const wet = a.createGain(); wet.gain.value = 0.42;
   const dl = a.createDelay(1); dl.delayTime.value = 0.32; const fb = a.createGain(); fb.gain.value = 0.32;
   const dlf = a.createBiquadFilter(); dlf.type = "lowpass"; dlf.frequency.value = 1800; const ech = a.createGain(); ech.gain.value = 0.35;
-  const s2 = a.createBufferSource(); s2.buffer = buf; s2.playbackRate.value = RATE; s2.detune.value = -8; // chvejici se "duch" za hlasem
-  const trem = a.createGain(); trem.gain.value = 0.18; const lfo = a.createOscillator(), lg = a.createGain(); lfo.frequency.value = 5.5; lg.gain.value = 0.12;
+  const s2 = a.createBufferSource(); s2.buffer = buf; s2.playbackRate.value = RATE; s2.detune.value = w ? 18 : -8; // chvejici se "duch" za hlasem
+  const trem = a.createGain(); trem.gain.value = w ? 0.26 : 0.18; const lfo = a.createOscillator(), lg = a.createGain(); lfo.frequency.value = w ? 7 : 5.5; lg.gain.value = w ? 0.22 : 0.12;
   const hp = a.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 500;
   const master = a.createGain(); master.gain.value = 1.3;
   lfo.connect(lg); lg.connect(trem.gain);
@@ -268,7 +270,7 @@ function stopSpeak() {
 }
 function speakTask(t, manual) {
   if (!t || !t.story) return; stopSpeak(); const tok = vTok;
-  voiceBuf(t.id).then(buf => { if (tok === vTok && (manual || cur === "task")) spookyPlay(buf); })
+  voiceBuf(t.id).then(buf => { if (tok === vTok && (manual || cur === "task")) spookyPlay(buf, t.id); })
     .catch(() => { if (tok === vTok) speak(`${t.title}. ${t.story} ${S.done[t.id] ? "" : t.q || ""}`, manual); });
 }
 

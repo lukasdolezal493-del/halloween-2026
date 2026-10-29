@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#16081f">
+<title>Noc duchů – Černý Důl</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="bats" aria-hidden="true"></div>
+
+<!-- UVOD -->
+<section id="s-intro" class="screen">
+  <div class="hero">
+    <div class="moon"></div>
+    <h1>Noc duchů</h1>
+    <p class="sub">Černý Důl · 31. 10. 2026</p>
+  </div>
+  <div class="card story">
+    <p>Strašidlo <b>Mlsoun Chřestivý</b> ukradlo všechny mlsky a schovalo je někde v okolí chaty. 🍬</p>
+    <p>Mapu k pokladu roztrhalo na <b>16 kousků</b>. Za každý splněný úkol dostanete odznak a jeden kousek mapy.</p>
+    <p>Někde po cestě navíc <b>svítí tajná písmena</b>. Najdete je jen baterkou! Dají dohromady heslo, které poklad odemkne.</p>
+  </div>
+  <div class="card rules">
+    <h3>⚠️ Pravidla výpravy</h3>
+    <ul>
+      <li>Držíte se pohromadě. Nikdo neutíká napřed.</li>
+      <li>Potmě se chodí, neběhá.</li>
+      <li>Dospělý jde s vámi jako strážce.</li>
+      <li>Telefon nese vždy <b>kapitán úkolu</b>.</li>
+    </ul>
+  </div>
+  <button class="btn big" id="b-start">Probudit strašidla 🧟</button>
+</section>
+
+<!-- PROFILY -->
+<section id="s-profiles" class="screen">
+  <h2>Strašidelné profily</h2>
+  <p class="muted">Každý se vyfotí a promění se ve strašidlo.</p>
+  <div id="kid-list"></div>
+  <button class="btn ghost" id="b-addkid">+ Přidat strašidlo</button>
+  <button class="btn big" id="b-profiles-done" disabled>Jdeme na to! 🎃</button>
+</section>
+
+<!-- EDITOR PROFILU -->
+<section id="s-editor" class="screen">
+  <h2 id="ed-title">Nové strašidlo</h2>
+  <div id="ed-cam" class="camwrap round">
+    <video id="ed-video" playsinline muted autoplay></video>
+    <button class="btn shutter" id="ed-shot">📸</button>
+  </div>
+  <div id="ed-edit" hidden>
+    <div id="ed-stage" class="stage">
+      <canvas id="ed-canvas" width="600" height="600"></canvas>
+      <div id="ed-stickers"></div>
+    </div>
+    <p class="muted small">Klepni na nálepku, pak ji posuň prstem na fotce.</p>
+    <div class="stickbar" id="stickbar"></div>
+    <div class="row" id="ed-sizebar" hidden>
+      <button class="btn small" id="ed-smaller">➖ menší</button>
+      <button class="btn small" id="ed-bigger">➕ větší</button>
+      <button class="btn small danger" id="ed-del">🗑️</button>
+    </div>
+    <button class="btn ghost small" id="ed-retake">📸 Vyfotit znovu</button>
+  </div>
+  <div class="card">
+    <label class="lbl">Kdo to je?</label>
+    <div class="row seg" id="ed-age">
+      <button data-a="s">nejmenší</button><button data-a="m">prostřední</button><button data-a="l">nejstarší</button>
+    </div>
+    <div class="row seg" id="ed-sex">
+      <button data-s="b">👦 kluk</button><button data-s="g">👧 holka</button>
+    </div>
+    <label class="lbl">Strašidelné jméno</label>
+    <div class="namebox"><span id="ed-name">…</span><button class="btn small" id="ed-roll">🎲</button></div>
+  </div>
+  <div class="row">
+    <button class="btn ghost" id="ed-cancel">Zpět</button>
+    <button class="btn" id="ed-save">Uložit strašidlo</button>
+  </div>
+</section>
+
+<!-- HLAVNI -->
+<section id="s-main" class="screen">
+  <header class="top">
+    <div id="team"></div>
+    <div class="prog"><div id="prog-bar"></div></div>
+    <div class="prog-txt" id="prog-txt"></div>
+  </header>
+  <div id="next-card"></div>
+  <div class="row">
+    <button class="btn" id="b-map">🗺️ Mapa</button>
+    <button class="btn ghost" id="b-gallery">🖼️ Úlovky</button>
+  </div>
+  <h3 class="sect">Všechny úkoly</h3>
+  <div id="task-list"></div>
+  <button class="btn ghost small parent" id="b-parent">🔐 Pro dospělé</button>
+</section>
+
+<!-- UKOL -->
+<section id="s-task" class="screen">
+  <button class="back" data-go="main">‹ Zpět</button>
+  <div id="task-body"></div>
+</section>
+
+<!-- FOTOAPARAT -->
+<section id="s-cam" class="screen dark">
+  <div class="camwrap">
+    <video id="cam-video" playsinline muted autoplay></video>
+    <img id="cam-preview" hidden alt="">
+  </div>
+  <div class="row" id="cam-live">
+    <button class="btn ghost" id="cam-cancel">Zpět</button>
+    <button class="btn shutter" id="cam-shot">📸</button>
+  </div>
+  <div class="row" id="cam-after" hidden>
+    <button class="btn ghost" id="cam-again">Znovu</button>
+    <button class="btn" id="cam-ok">Hotovo ✔</button>
+  </div>
+</section>
+
+<!-- MAPA -->
+<section id="s-map" class="screen">
+  <button class="back" data-go="main">‹ Zpět</button>
+  <h2 id="map-title">Mapa pokladu</h2>
+  <p class="muted" id="map-sub"></p>
+  <div class="mapscroll" id="mapscroll">
+    <div class="mapbox" id="mapbox">
+      <img src="img/mapa.jpg" alt="Mapa okolí chaty" id="map-img">
+      <div id="map-fog"></div>
+      <div id="map-marks"></div>
+    </div>
+  </div>
+  <button class="btn ghost small" id="b-zoom">🔍 Přiblížit</button>
+  <div id="map-final"></div>
+</section>
+
+<!-- GALERIE -->
+<section id="s-gallery" class="screen">
+  <button class="back" data-go="main">‹ Zpět</button>
+  <h2>Úlovky</h2>
+  <div id="gal" class="gal"></div>
+</section>
+
+<!-- RODIC -->
+<section id="s-parent" class="screen">
+  <button class="back" data-go="main">‹ Zpět</button>
+  <h2>🔐 Strážce hry</h2>
+  <div class="card">
+    <h3>💰 Kde je poklad</h3>
+    <p class="muted small" id="p-treasure-txt"></p>
+    <button class="btn" id="p-treasure">Schovat poklad na mapě</button>
+    <label class="lbl">Upřesnění (uvidí děti na konci)</label>
+    <input id="p-note" maxlength="80" placeholder="např. za oranžovou truhlou">
+  </div>
+  <div class="card">
+    <h3>Ovládání hry</h3>
+    <button class="btn ghost" id="p-skip">⏭️ Přeskočit aktuální úkol</button>
+    <button class="btn ghost" id="p-kids">🧟 Upravit strašidla</button>
+    <button class="btn ghost" id="p-pin">🔢 Změnit PIN</button>
+    <button class="btn ghost" id="p-update">🔄 Aktualizovat appku</button>
+    <button class="btn danger" id="p-reset">🗑️ Začít celou hru znovu</button>
+  </div>
+  <div class="card">
+    <h3>Tahák – odpovědi</h3>
+    <div id="p-cheat" class="small"></div>
+  </div>
+  <p class="muted small center">verze 1</p>
+</section>
+
+<!-- PIN -->
+<div id="pin" class="modal" hidden>
+  <div class="modal-in">
+    <h3 id="pin-title">Dospělý, potvrď PINem</h3>
+    <div class="pin-dots" id="pin-dots"><i></i><i></i><i></i><i></i></div>
+    <div class="pad" id="pad"></div>
+    <button class="btn ghost small" id="pin-cancel">Zrušit</button>
+  </div>
+</div>
+
+<!-- ODZNAK -->
+<div id="award" class="modal" hidden>
+  <div class="modal-in center">
+    <div class="badge-big" id="aw-emoji"></div>
+    <h2 id="aw-title"></h2>
+    <p id="aw-txt"></p>
+    <button class="btn big" id="aw-ok">Super! 🎃</button>
+  </div>
+</div>
+
+<div id="toast" hidden></div>
+<button id="torch" class="torch" aria-label="Baterka">🔦</button>
+<video id="torch-video" playsinline muted autoplay class="hidden-video"></video>
+
+<script src="app.js"></script>
+</body>
+</html>

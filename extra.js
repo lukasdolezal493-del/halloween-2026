@@ -241,12 +241,59 @@ function showMusic(on) {
 const SCARE = { obcas: [4, 8], casto: [2, 4] }; // minuty mezi lekackami
 // cas dalsi lekacky se uklada do telefonu – kdyz telefon appku pri zhasnuti uspi a znovu nacte, odpocet nezacina od nuly
 function planScare() { const r = SCARE[S.scare]; S.nextScare = r ? Date.now() + rand(r[0], r[1]) * 60000 : 0; save(); }
-function scare() {
-  const el = $("#scare"), c = $("#sc-c"), x = c.getContext("2d");
-  x.clearRect(0, 0, 400, 400); x.filter = "blur(2px)"; drawGhost(x, Math.random() < 0.5 ? 0 : 1, 200, 210, 360, 0.95); x.filter = "none";
-  el.hidden = false; el.classList.remove("go"); void el.offsetWidth; el.classList.add("go");
-  sndScream(); vib([250, 60, 250]);
-  setTimeout(() => { el.hidden = true; el.classList.remove("go"); }, 1100);
+// 4 druhy lekacek, stridaji se nahodne (nikdy dvakrat stejna po sobe)
+// kreslena carodejnice: zelena tvar, spicaty klobouk, svitici oci, krivy usklebek
+function drawWitch(x, cx, cy, H) {
+  x.save(); x.translate(cx, cy);
+  const W = H * 0.5, f = x.createRadialGradient(0, H * 0.08, W * 0.1, 0, H * 0.08, W * 0.75);
+  f.addColorStop(0, "#9be05a"); f.addColorStop(0.7, "#4f8a2a"); f.addColorStop(1, "#1d3a0f");
+  x.fillStyle = f; x.beginPath(); x.ellipse(0, H * 0.1, W / 2, H * 0.3, 0, 0, 7); x.fill();
+  x.beginPath(); x.moveTo(-W * 0.06, H * 0.08); x.quadraticCurveTo(W * 0.02, H * 0.2, W * 0.16, H * 0.24); x.lineTo(W * 0.02, H * 0.2); x.fill(); // nos
+  x.fillStyle = "#3d6b1f"; x.beginPath(); x.arc(W * 0.12, H * 0.2, W * 0.03, 0, 7); x.fill(); // bradavice
+  x.fillStyle = "#111"; x.beginPath(); x.moveTo(-W * 0.85, -H * 0.12); x.lineTo(W * 0.85, -H * 0.12); x.lineTo(W * 0.6, -H * 0.2); x.lineTo(-W * 0.6, -H * 0.2); x.fill(); // krempa
+  x.beginPath(); x.moveTo(-W * 0.38, -H * 0.18); x.lineTo(W * 0.38, -H * 0.18); x.lineTo(W * 0.25, -H * 0.42); x.lineTo(W * 0.45, -H * 0.55); x.lineTo(W * 0.05, -H * 0.45); x.closePath(); x.fill(); // spicka
+  x.fillStyle = "#7b2cbf"; x.fillRect(-W * 0.37, -H * 0.22, W * 0.74, H * 0.04);
+  x.shadowColor = "#ff2020"; x.shadowBlur = 25; x.fillStyle = "#ff3030";
+  [-1, 1].forEach(sg => { x.beginPath(); x.ellipse(sg * W * 0.18, H * 0.0, W * 0.08, H * 0.03, sg * -0.35, 0, 7); x.fill(); });
+  x.shadowBlur = 0; x.fillStyle = "#1a0505"; x.beginPath(); x.moveTo(-W * 0.22, H * 0.27); x.quadraticCurveTo(0, H * 0.36, W * 0.24, H * 0.25); x.quadraticCurveTo(0, H * 0.31, -W * 0.22, H * 0.27); x.fill(); // usklebek
+  x.fillStyle = "#e8e0b0"; [-0.1, 0.08].forEach(z => { x.beginPath(); x.moveTo(W * z, H * 0.29); x.lineTo(W * (z + 0.05), H * 0.29); x.lineTo(W * (z + 0.025), H * 0.33); x.fill(); }); // zuby
+  x.strokeStyle = "#555"; x.lineWidth = 3; for (let i = 0; i < 9; i++) { const sg = i % 2 ? 1 : -1, y0 = -H * 0.08 + i * 4; x.beginPath(); x.moveTo(sg * W * 0.45, y0); x.quadraticCurveTo(sg * W * 0.75, H * 0.2, sg * W * (0.55 + i * 0.03), H * 0.45); x.stroke(); } // vlasy
+  x.restore();
+}
+// nahravka primo do usi (bez dozvuku); bez nahravky (iPhone neumi .ogg) nahradni zvuk
+async function sfxNow(id, vol, rate) {
+  const a = ac(); if (!a) return;
+  try { const s = a.createBufferSource(), g = a.createGain(); s.buffer = await sfxBuf(a, id); if (rate) s.playbackRate.value = rate; g.gain.value = vol;
+    const lim = a.createDynamicsCompressor(); lim.threshold.value = -8; lim.knee.value = 4; lim.ratio.value = 20; lim.attack.value = 0.002; lim.release.value = 0.2; // pojistka proti chrceni
+    s.connect(g); g.connect(lim); lim.connect(a.destination); s.start(); }
+  catch (e) { sndScream(); }
+}
+const SCARES = ["krik", "carodejnice", "hrom", "strasidlo"];
+let scareLast = "", scareTestI = 0;
+function scare(kind) {
+  if (!kind) { const k = SCARES.filter(v => v !== scareLast && (v !== "strasidlo" || S.kids.length)); kind = k[Math.floor(Math.random() * k.length)]; }
+  scareLast = kind;
+  const el = $("#scare"), c = $("#sc-c"), x = c.getContext("2d"), boo = el.querySelector(".boo");
+  x.clearRect(0, 0, 400, 400); el.className = ""; let len = 1300;
+  if (kind === "krik") { // duch + skutecny vykrik
+    x.filter = "blur(2px)"; drawGhost(x, Math.random() < 0.5 ? 0 : 1, 200, 210, 360, 0.95); x.filter = "none";
+    boo.textContent = "BÚÚÚ!"; sfxNow("krik1", 1.6); vib([250, 60, 250]);
+  } else if (kind === "carodejnice") { // carodejnice + chechot
+    drawWitch(x, 200, 215, 400); boo.textContent = "Chi chi chi!"; len = 2200;
+    sfxNow(AMB_REC.chechot[Math.floor(Math.random() * 3)], 1.8, 0.9); vib([100, 50, 100, 50, 300]);
+  } else if (kind === "hrom") { // zablesky, ve tme se mihne duch
+    x.filter = "blur(3px)"; drawGhost(x, 1, 200, 200, 380, 0.9); x.filter = "none";
+    boo.textContent = ""; el.classList.add("flash"); len = 2300;
+    sfxNow(AMB_REC.hrom[Math.floor(Math.random() * 2)], 1.6); sndThunder(0.7); vib([60, 80, 60, 300, 600]);
+  } else { // vlastni strasidlo z profilu vyskoci na celou obrazovku
+    const k = S.kids[Math.floor(Math.random() * S.kids.length)], im = new Image();
+    im.onload = () => { x.save(); x.beginPath(); x.arc(200, 200, 195, 0, 7); x.clip(); const r = Math.max(400 / im.width, 400 / im.height); x.drawImage(im, 200 - im.width * r / 2, 200 - im.height * r / 2, im.width * r, im.height * r);
+      const v = x.createRadialGradient(200, 200, 120, 200, 200, 200); v.addColorStop(0, "rgba(120,0,0,0)"); v.addColorStop(1, "rgba(120,0,0,.75)"); x.fillStyle = v; x.fillRect(0, 0, 400, 400); x.restore(); };
+    im.src = k.avatar; boo.textContent = `${k.name} si pro vás jde!`; el.classList.add("kid"); len = 2600;
+    const a = ac(); if (a) AMBFX.psycho(a, a.destination, a.currentTime + 0.02); vib([150, 40, 150, 40, 400]);
+  }
+  el.hidden = false; void el.offsetWidth; el.classList.add("go");
+  setTimeout(() => { el.hidden = true; el.className = ""; }, len);
 }
 setInterval(() => {
   if (!S.scare || S.scare === "off" || S.finished || !S.done.probuzeni || document.hidden) return;
@@ -342,7 +389,7 @@ function paintFxSet() {
 $("#p-scare").onclick = e => { const b = e.target.closest("button"); if (!b) return; S.scare = b.dataset.v; save(); planScare(); paintFxSet(); };
 $("#p-voice").onclick = e => { const b = e.target.closest("button"); if (!b) return; S.voice = b.dataset.v === "1"; save(); paintFxSet(); };
 $("#p-amb").onclick = e => { const b = e.target.closest("button"); if (!b) return; S.amb = b.dataset.v === "1"; save(); S.amb ? startAmb() : stopAmb(); paintFxSet(); };
-$("#p-scare-test").onclick = () => scare();
+$("#p-scare-test").onclick = () => { const k = SCARES[scareTestI++ % SCARES.length]; scare(k === "strasidlo" && !S.kids.length ? "krik" : k); }; // postupne vsechny 4
 $("#p-voice-test").onclick = () => speakTask(TASKS[1], true);
 $("#p-amb-test").onclick = () => { const a = ac(), bus = ambBus(a); let d = 0; Object.keys(AMB_W).forEach(k => { setTimeout(() => { toast(AMB_NAMES[k]); ambEvent(a, bus, a.currentTime + 0.05, k).catch(() => {}); }, d * 1000); d += k === "hororovka" ? 30 : k === "scena" ? 18 : k === "broukani" ? 14 : 8; }); };
 

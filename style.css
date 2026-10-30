@@ -176,6 +176,11 @@ input:focus{outline:none;border-color:var(--orange)}
 #sc-c{width:90vmin;height:90vmin}
 #scare .boo{font:64px Griffy,sans-serif;color:var(--red);text-shadow:0 0 20px #ff4d6d;margin-top:-40px}
 #scare.go #sc-c{animation:jump .5s cubic-bezier(.2,1.8,.3,1),jit .08s linear .5s 6}
+#scare.kid .boo{font-size:36px;text-align:center;padding:0 16px;margin-top:10px}
+#scare.flash{animation:blesk 2.3s linear}
+#scare.flash #sc-c{animation:mihnuti 2.3s linear}
+@keyframes blesk{0%,6%{background:#fff}7%,15%{background:#000}16%,20%{background:#dde6ff}21%,55%{background:#000}56%,59%{background:#fff}60%,100%{background:#000}}
+@keyframes mihnuti{0%,15%{opacity:0}16%,21%{opacity:1}22%,55%{opacity:0}56%,75%{opacity:1}76%,100%{opacity:0}}
 @keyframes jump{from{transform:scale(.2)}to{transform:scale(1)}}
 @keyframes jit{25%{transform:translate(-6px,3px)}75%{transform:translate(6px,-3px)}}
 #show{position:fixed;inset:0;z-index:250;background:#000}

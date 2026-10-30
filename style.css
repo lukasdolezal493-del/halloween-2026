@@ -71,7 +71,9 @@ input:focus{outline:none;border-color:var(--orange)}
 /* hlavni */
 .top{position:sticky;top:0;z-index:5;background:linear-gradient(var(--bg) 75%,transparent);padding:6px 0 10px;margin:-16px -16px 0;padding-left:16px;padding-right:16px}
 #team{display:flex;gap:8px;justify-content:center;padding-top:8px}
-#team img{width:52px;height:52px;border-radius:50%;border:2px solid var(--orange);object-fit:cover}
+#team img{width:52px;height:52px;border-radius:50%;border:2px solid var(--orange);object-fit:cover;cursor:pointer}
+#kv-img{width:100%;max-height:60vh;object-fit:contain;border-radius:16px;border:2px solid var(--orange);box-shadow:0 0 30px #ff8a1f66}
+#kv-name{font-family:Griffy,sans-serif;font-size:34px;margin:12px 0 0;color:var(--orange)}
 .prog{height:12px;border-radius:8px;background:#2a1840;margin:10px 0 4px;overflow:hidden}
 #prog-bar{height:100%;background:linear-gradient(90deg,var(--green),var(--orange));width:0;transition:width .6s}
 .prog-txt{text-align:center;font-size:14px;color:var(--muted)}

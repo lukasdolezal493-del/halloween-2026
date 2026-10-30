@@ -239,8 +239,8 @@ function showMusic(on) {
 
 // ---------- 4) LEKACKY ----------
 const SCARE = { obcas: [4, 8], casto: [2, 4] }; // minuty mezi lekackami
-let nextScare = 0;
-function planScare() { const r = SCARE[S.scare]; nextScare = r ? Date.now() + rand(r[0], r[1]) * 60000 : 0; }
+// cas dalsi lekacky se uklada do telefonu – kdyz telefon appku pri zhasnuti uspi a znovu nacte, odpocet nezacina od nuly
+function planScare() { const r = SCARE[S.scare]; S.nextScare = r ? Date.now() + rand(r[0], r[1]) * 60000 : 0; save(); }
 function scare() {
   const el = $("#scare"), c = $("#sc-c"), x = c.getContext("2d");
   x.clearRect(0, 0, 400, 400); x.filter = "blur(2px)"; drawGhost(x, Math.random() < 0.5 ? 0 : 1, 200, 210, 360, 0.95); x.filter = "none";
@@ -250,10 +250,10 @@ function scare() {
 }
 setInterval(() => {
   if (!S.scare || S.scare === "off" || S.finished || !S.done.probuzeni || document.hidden) return;
-  if (!["main", "task", "map", "gallery"].includes(cur) || !$("#pin").hidden || !$("#award").hidden || !$("#pcheck").hidden || !$("#morph").hidden || SH || REC) return;
-  if (!nextScare) { planScare(); return; }
-  if (Date.now() >= nextScare) { scare(); planScare(); }
-}, 15000);
+  if (!["main", "task", "map", "gallery"].includes(cur) || !$("#pin").hidden || !$("#award").hidden || !$("#pcheck").hidden || !$("#morph").hidden || !$("#kidview").hidden || SH || REC) return;
+  if (!S.nextScare) { planScare(); return; }
+  if (Date.now() >= S.nextScare) { scare(); planScare(); }
+}, 3000);
 
 // ---------- 5) CTENI NAHLAS ----------
 let csVoice = null;

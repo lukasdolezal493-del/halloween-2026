@@ -386,7 +386,7 @@ $("#ed-save").onclick = () => {
 
 // ---------- HLAVNI ----------
 function renderMain() {
-  $("#team").innerHTML = kidsSorted().map(k => `<img src="${k.avatar}" alt="${esc(k.name)}">`).join("");
+  $("#team").innerHTML = kidsSorted().map(k => `<img src="${k.avatar}" alt="${esc(k.name)}" data-kid="${S.kids.indexOf(k)}">`).join("");
   const n = doneCount(); $("#prog-bar").style.width = (n / TASKS.length * 100) + "%";
   $("#prog-txt").textContent = `${n} z ${TASKS.length} odznaků · ${n} ${kusu(n)} mapy`;
   const ci = curIndex();
@@ -409,6 +409,13 @@ function renderMain() {
   }).join("");
   $("#task-list").querySelectorAll(".tl:not(.lock)").forEach(b => b.onclick = () => openTask(+b.dataset.i));
 }
+// klik na strasidlo nahore -> velka fotka se strasidelnym jmenem
+$("#team").onclick = e => {
+  const k = S.kids[e.target.dataset.kid]; if (!k) return;
+  $("#kv-img").src = k.avatar; $("#kv-name").textContent = k.name; $("#kv-age").textContent = AGE[k.age] || "";
+  $("#kidview").hidden = false; sndBoo();
+};
+$("#kidview").onclick = () => $("#kidview").hidden = true;
 $("#b-map").onclick = () => go("map");
 $("#b-gallery").onclick = () => go("gallery");
 $("#g-show").onclick = () => startShow();

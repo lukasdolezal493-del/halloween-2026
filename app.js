@@ -82,7 +82,7 @@ const NAMES = {
 // ---------- STAV ----------
 const KEY = "hw26";
 let S = load();
-function fresh() { return { kids: [], done: {}, letters: {}, quota: {}, pin: "5879", treasure: null, note: "", finished: false, scare: "obcas", voice: true, amb: true }; }
+function fresh() { return { kids: [], done: {}, letters: {}, quota: {}, pin: "5879", treasure: null, note: "", finished: false, scare: "obcas", voice: true, amb: true, wake: true }; }
 function load() {
   try { const j = JSON.parse(localStorage.getItem(KEY)); if (j && j.kids) return Object.assign(fresh(), j); } catch (e) {}
   return fresh();
@@ -609,7 +609,7 @@ $("#p-update").onclick = async () => {
 };
 $("#p-reset").onclick = () => {
   if (!confirm("Opravdu smazat celou hru (strašidla, fotky, postup)?")) return;
-  const pin = S.pin, tr = S.treasure, note = S.note, set = { scare: S.scare, voice: S.voice, amb: S.amb };
+  const pin = S.pin, tr = S.treasure, note = S.note, set = { scare: S.scare, voice: S.voice, amb: S.amb, wake: S.wake };
   try { Object.keys(localStorage).filter(k => k.startsWith("hw26")).forEach(k => localStorage.removeItem(k)); } catch (e) {}
   S = fresh(); S.pin = pin; S.treasure = tr; S.note = note; Object.assign(S, set); save(); go("intro");
 };

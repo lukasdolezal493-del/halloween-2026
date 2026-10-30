@@ -302,6 +302,18 @@ setInterval(() => {
   if (Date.now() >= S.nextScare) { scare(); planScare(); }
 }, 3000);
 
+// ---------- NEZHASINAT DISPLEJ ----------
+// telefon pri chuzi zhasina -> utichne pozadi a lekacky cekaji; dokud se hraje, drzime displej rozsviceny
+let WL = null;
+async function wakeSync() {
+  const want = S.wake && S.kids.length && !document.hidden && "wakeLock" in navigator;
+  if (want && !WL) { try { WL = await navigator.wakeLock.request("screen"); WL.addEventListener("release", () => { WL = null; }); } catch (e) { WL = null; } }
+  else if (!want && WL) { try { await WL.release(); } catch (e) {} WL = null; }
+}
+document.addEventListener("visibilitychange", wakeSync);
+document.addEventListener("click", wakeSync); // prvni klepnuti po otevreni (nekdy telefon chce dotyk)
+wakeSync();
+
 // ---------- 5) CTENI NAHLAS ----------
 let csVoice = null;
 function pickVoice() { try { csVoice = speechSynthesis.getVoices().find(v => /^cs/i.test(v.lang)) || null; } catch (e) {} }
@@ -385,10 +397,12 @@ function paintFxSet() {
   document.querySelectorAll("#p-scare button").forEach(b => b.classList.toggle("on", b.dataset.v === (S.scare || "off")));
   document.querySelectorAll("#p-voice button").forEach(b => b.classList.toggle("on", b.dataset.v === (S.voice ? "1" : "0")));
   document.querySelectorAll("#p-amb button").forEach(b => b.classList.toggle("on", b.dataset.v === (S.amb ? "1" : "0")));
+  document.querySelectorAll("#p-wake button").forEach(b => b.classList.toggle("on", b.dataset.v === (S.wake ? "1" : "0")));
 }
 $("#p-scare").onclick = e => { const b = e.target.closest("button"); if (!b) return; S.scare = b.dataset.v; save(); planScare(); paintFxSet(); };
 $("#p-voice").onclick = e => { const b = e.target.closest("button"); if (!b) return; S.voice = b.dataset.v === "1"; save(); paintFxSet(); };
 $("#p-amb").onclick = e => { const b = e.target.closest("button"); if (!b) return; S.amb = b.dataset.v === "1"; save(); S.amb ? startAmb() : stopAmb(); paintFxSet(); };
+$("#p-wake").onclick = e => { const b = e.target.closest("button"); if (!b) return; S.wake = b.dataset.v === "1"; save(); wakeSync(); paintFxSet(); };
 $("#p-scare-test").onclick = () => { const k = SCARES[scareTestI++ % SCARES.length]; scare(k === "strasidlo" && !S.kids.length ? "krik" : k); }; // postupne vsechny 4
 $("#p-voice-test").onclick = () => speakTask(TASKS[1], true);
 $("#p-amb-test").onclick = () => { const a = ac(), bus = ambBus(a); let d = 0; Object.keys(AMB_W).forEach(k => { setTimeout(() => { toast(AMB_NAMES[k]); ambEvent(a, bus, a.currentTime + 0.05, k).catch(() => {}); }, d * 1000); d += k === "hororovka" ? 30 : k === "scena" ? 18 : k === "broukani" ? 14 : 8; }); };

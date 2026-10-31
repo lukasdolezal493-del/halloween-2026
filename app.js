@@ -588,8 +588,13 @@ function renderParent() {
   const tr = S.treasure || DEFAULT_TREASURE;
   $("#p-treasure-txt").textContent = S.treasure ? "Poklad je schovaný tam, kde jsi klepnul na mapě." : "Zatím výchozí místo: oranžová bedna (Truhla) pod cedulí VÝJEZD.";
   $("#p-note").value = S.note || ""; paintFxSet();
-  $("#p-cheat").innerHTML = `<div class="cheat">${TASKS.slice(1).map((t, i) => `<div>${i + 1}. ${t.e} <b>${esc(t.title)}</b>: ${t.type === "answer" ? "odpověď " + t.a[0] : t.type === "quota" ? t.total + " " + t.unit : "fotka"}${t.letter ? ` · písmeno <b>${t.letter}</b>` : ""}</div>`).join("")}<div>🔑 Heslo: <b>${HESLO}</b></div></div>`;
+  $("#p-cheat").innerHTML = `<div class="cheat">${TASKS.slice(1).map((t, i) => `<div${t.letter ? ` class="cl" data-t="${t.id}"` : ""}>${i + 1}. ${t.e} <b>${esc(t.title)}</b>: ${t.type === "answer" ? "odpověď " + t.a[0] : t.type === "quota" ? t.total + " " + t.unit : "fotka"}${t.letter ? ` · písmeno <b>${t.letter}</b> 📷` : ""}</div>`).join("")}<div>🔑 Heslo: <b>${HESLO}</b></div></div>`;
 }
+$("#p-cheat").onclick = e => {
+  const t = TASKS.find(x => x.id === e.target.closest(".cl")?.dataset.t); if (!t) return;
+  $("#kv-img").src = `img/${t.img}.jpg`; $("#kv-name").textContent = `${t.letter} · ${t.title}`; $("#kv-age").textContent = t.where || "";
+  $("#kidview").hidden = false;
+};
 $("#p-note").oninput = e => { S.note = e.target.value; save(); };
 $("#p-treasure").onclick = () => { picking = true; go("map"); };
 $("#p-skip").onclick = () => {
